@@ -1,12 +1,12 @@
 const mongoose = require("mongoose");
 
-const timeshareImageSchema = mongoose.Schema(
+const contractImageSchema = mongoose.Schema(
   {
-    timeshare_img_type: {
+    contract_url: {
       type: String,
       required: true,
     },
-    timeshare_img_url: {
+    contract_img_description: {
       type: String,
       required: true,
     },
@@ -14,4 +14,4 @@ const timeshareImageSchema = mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("TimeshareImage", timeshareImageSchema);
+module.exports = mongoose.model("ContractImage", contractImageSchema);

@@ -1,22 +1,31 @@
 const mongoose = require("mongoose");
-const User = require("./User");
-const Timeshare = require("./Timeshare");
 
 const transactionSchema = mongoose.Schema(
   {
     timeshare_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: Timeshare,
-      required: [true],
+      ref: "Timeshare",
+      required: true,
     },
-    customer_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: User,
-      required: [true],
-    },
+    customers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+      },
+    ],
     transaction_status: {
       type: String,
-      required: [true],
+      required: true,
+    },
+    reservation_price: {
+      type: Number,
+    },
+    is_reservation_paid: {
+      type: Boolean,
+    },
+    reservation_time: {
+      type: Date,
     },
   },
   { timestamps: true }

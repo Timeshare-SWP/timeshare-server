@@ -39,6 +39,10 @@ const userRouter = require("./src/routes/UserRouter");
 const authRouter = require("./src/routes/AuthRouter");
 const timeshareRouter = require("./src/routes/TimeshareRouter");
 const reservePlaceRouter = require("./src/routes/ReservePlaceRouter");
+const transactionRouter = require("./src/routes/TransactionRouter");
+const contractRouter = require("./src/routes/ContractRouter");
+const phaseRouter = require("./src/routes/PhaseRouter");
+const notificationRouter = require("./src/routes/NotificationRouter");
 
 //static folder path
 app.use(express.static(path.resolve(__dirname, "public")));
@@ -48,6 +52,10 @@ app.use("/api/users", userRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/timeshares", timeshareRouter);
 app.use("/api/reservePlaces", reservePlaceRouter);
+app.use("/api/transactions", transactionRouter);
+app.use("/api/contracts", contractRouter);
+app.use("/api/phases", phaseRouter);
+app.use("/api/notifications", notificationRouter);
 
 // Global error handler
 app.use(errorHandler);

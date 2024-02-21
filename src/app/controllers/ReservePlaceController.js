@@ -1,8 +1,10 @@
 const asyncHandler = require("express-async-handler");
 const RoleEnum = require("../../enum/RoleEnum");
 const Timeshare = require("../models/Timeshare");
-const ReservePlace = require("../models/ReservePlace");
 const SellTimeshareStatus = require("../../enum/SellTimeshareStatus");
+const Transaction = require("../models/Transaction");
+const TransactionStatus = require("../../enum/TransactionStatus");
+const { default: mongoose } = require("mongoose");
 
 //@desc Create new ReservePlace
 //@route POST /reservePlaces
@@ -27,12 +29,16 @@ const createReservePlace = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error("Chỉ timeshare chưa được bán mới có thể đặt cọc");
     }
-    const reservePlace = new ReservePlace(req.body);
+    const reservePlace = new Transaction(req.body);
     if (!reservePlace) {
       res.status(400);
       throw new Error("Có lỗi xảy ra khi thực hiện đặt cọc");
     }
-    reservePlace.customer_id = req.user.id.toString();
+    reservePlace.customers = new Array();
+    reservePlace.customers.push(req.user.id);
+    reservePlace.transaction_status = TransactionStatus.RESERVING;
+    reservePlace.is_reservation_paid = false;
+    reservePlace.reservation_time = new Date();
     const newReservePlace = await reservePlace.save();
     if (!reservePlace) {
       res.status(500);
@@ -65,23 +71,50 @@ const searchReservePlaceByTimeshareName = asyncHandler(
         throw new Error("Có lỗi khi tìm kiếm đặt cọc theo tên timeshare");
       } else if (timeshares.length === 0) {
         res.status(200).json(timeshares);
+        return;
       }
-      const reservePlacesPromises = timeshares.map(async (timeshare) => {
-        // For each timeshare, find the related ReservePlace documents
-        const reservePlaces = await ReservePlace.find({
-          timeshare_id: timeshare._id,
-        })
-          .populate("customer_id")
-          .exec();
-
-        // Add the reservePlaces array to the timeshare document
-        return { timeshare, reservePlaces };
+      const timeshareIds = timeshares.map((timeshare) => timeshare._id);
+      const transaction_status_reserve = [
+        TransactionStatus.RESERVING,
+        TransactionStatus.UNRESERVE,
+      ];
+      const reservePlaces = await Transaction.find({
+        timeshare_id: { $in: timeshareIds },
+        transaction_status: { $in: transaction_status_reserve },
       });
-      // Use Promise.all to wait for all the promises to resolve
-      const results = await Promise.all(reservePlacesPromises);
-
-      // Now, `results` will be an array where each element contains a timeshare and its related reservePlaces
-      res.status(200).json(results);
+      if (!reservePlaces) {
+        res.status(500);
+        throw new Error("Có lỗi khi tìm kiếm đặt cọc theo tên timeshare");
+      }
+      //filter follow roleName
+      const role = req.user.roleName;
+      switch (role) {
+        case RoleEnum.ADMIN: {
+          res.status(200).json(reservePlaces);
+          break;
+        }
+        case RoleEnum.STAFF: {
+          res.status(200).json(reservePlaces);
+          break;
+        }
+        case RoleEnum.CUSTOMER: {
+          const result = reservePlaces.filter((reservePlace) =>
+            reservePlace.customers.find(
+              (customer) => customer._id.toString() === req.user.id.toString()
+            )
+          );
+          res.status(200).json(result);
+          break;
+        }
+        case RoleEnum.INVESTOR: {
+          const result = reservePlaces.filter(
+            (reservePlace) =>
+              reservePlace.timeshare_id.investor_id.toString() === req.user.id
+          );
+          res.status(200).json(result);
+          break;
+        }
+      }
     } catch (error) {
       res
         .status(res.statusCode || 500)
@@ -90,7 +123,214 @@ const searchReservePlaceByTimeshareName = asyncHandler(
   }
 );
 
+//@desc Filter Timeshare
+//@route GET /reservePlaces/filter
+//@access private
+const filterReservePlaceByTimeshare = asyncHandler(async (req, res) => {
+  try {
+    const filtersArray = req.body;
+    const timeshares = await Timeshare.find();
+    if (filtersArray.length === 0) {
+      res.status(200).json(timeshares);
+    } else {
+      // Xây dựng query từ filtersArray
+      const query = {};
+
+      filtersArray.forEach((filter) => {
+        const { key, value } = filter;
+
+        if (key && value) {
+          if (key === "year_of_commencement" || key === "year_of_handover") {
+            // Xử lý trường hợp đặc biệt cho các trường năm
+            const [startYear, endYear] = value.split("-");
+
+            if (startYear && endYear) {
+              query[key] = { $gte: startYear, $lte: endYear };
+            }
+          } else {
+            query[key] = value;
+          }
+        }
+      });
+
+      // Thực hiện truy vấn và trả về kết quả
+      const timeshares_filter = await Timeshare.find(query);
+
+      const timeshareIds = timeshares_filter.map((timeshare) => timeshare._id);
+
+      const transaction_status_reserve = [
+        TransactionStatus.RESERVING,
+        TransactionStatus.UNRESERVE,
+      ];
+      const reservePlaces = await Transaction.find({
+        timeshare_id: { $in: timeshareIds },
+        transaction_status: { $in: transaction_status_reserve },
+      });
+      if (!reservePlaces) {
+        res.status(500);
+        throw new Error("Có lỗi khi tìm kiếm đặt cọc theo tên timeshare");
+      }
+      //filter follow roleName
+      const role = req.user.roleName;
+      switch (role) {
+        case RoleEnum.ADMIN: {
+          res.status(200).json(reservePlaces);
+          break;
+        }
+        case RoleEnum.STAFF: {
+          res.status(200).json(reservePlaces);
+          break;
+        }
+        case RoleEnum.CUSTOMER: {
+          const result = reservePlaces.filter((reservePlace) =>
+            reservePlace.customers.find(
+              (customer) => customer._id.toString() === req.user.id.toString()
+            )
+          );
+          res.status(200).json(result);
+          break;
+        }
+        case RoleEnum.INVESTOR: {
+          const result = reservePlaces.filter(
+            (reservePlace) =>
+              reservePlace.timeshare_id.investor_id.toString() === req.user.id
+          );
+          res.status(200).json(result);
+          break;
+        }
+      }
+    }
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
+//@desc Filter Timeshare
+//@route GET /reservePlaces
+//@access private
+const getAllReservePlaces = asyncHandler(async (req, res) => {
+  try {
+    const transaction_status_reserve = [
+      TransactionStatus.RESERVING,
+      TransactionStatus.UNRESERVE,
+    ];
+    const reservePlaces = await Transaction.find({
+      transaction_status: { $in: transaction_status_reserve },
+    })
+      .populate("customers")
+      .populate({
+        path: "timeshare_id",
+        populate: { path: "timeshare_image" },
+      })
+      .exec();
+    if (!reservePlaces) {
+      res.status(400);
+      throw new Error("Có lỗi xảy ra khi truy xuất tất cả đặt cọc");
+    }
+    const role = req.user.roleName;
+    switch (role) {
+      case RoleEnum.ADMIN: {
+        res.status(200).json(reservePlaces);
+        break;
+      }
+      case RoleEnum.STAFF: {
+        res.status(200).json(reservePlaces);
+        break;
+      }
+      case RoleEnum.CUSTOMER: {
+        const result = reservePlaces.filter((reservePlace) =>
+          reservePlace.customers.find(
+            (customer) => customer._id.toString() === req.user.id.toString()
+          )
+        );
+        res.status(200).json(result);
+        break;
+      }
+      case RoleEnum.INVESTOR: {
+        const result = reservePlaces.filter(
+          (reservePlace) =>
+            reservePlace.timeshare_id.investor_id.toString() === req.user.id
+        );
+        res.status(200).json(result);
+        break;
+      }
+    }
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
+//@desc Filter Timeshare
+//@route GET /reservePlaces/whoReservePlace/:timeshare_id
+//@access private
+const getAllCustomerWhoReservePlace = asyncHandler(async (req, res) => {
+  try {
+    const { timeshare_id } = req.params;
+    const reservePlaces = await Transaction.find({ timeshare_id }).populate(
+      "customers"
+    );
+    if (!reservePlaces) {
+      res.status(400);
+      throw new Error(
+        "Có lỗi xảy ra khi truy xuất tất cả khách hàng đã đặt cọc timeshare"
+      );
+    }
+    res.status(200).json(reservePlaces);
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
+//@desc Filter Timeshare
+//@route GET /reservePlaces/cancel
+//@access private
+const cancelReservePlace = asyncHandler(async (req, res) => {
+  try {
+    if (req.user.roleName !== "Customer") {
+      res.status(403);
+      throw new Error("Chỉ có khách hàng có thể hủy đặt cọc");
+    }
+    const { transaction_id } = req.query;
+    const transaction = await Transaction.findById(transaction_id);
+    if (!transaction) {
+      res.status(404);
+      throw new Error("Không tìm thấy đặt cọc");
+    }
+    if (transaction.transaction_status !== TransactionStatus.RESERVING) {
+      res.status(400);
+      throw new Error("Trạng thái của đặt cọc không phù hợp để hủy");
+    }
+    if (!transaction.customers.includes(req.user.id)) {
+      res.status(403);
+      throw new Error(
+        "Chỉ có khách hàng đang tham gia timeshare mới có quyền hủy đặt cọc"
+      );
+    }
+    transaction.transaction_status = TransactionStatus.UNRESERVE;
+    const result = await transaction.save();
+    if (!result) {
+      res.status(500);
+      throw new Error("Có lỗi xảy ra khi hủy đặt cọc");
+    }
+    res.status(200).json(result);
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
 module.exports = {
   createReservePlace,
   searchReservePlaceByTimeshareName,
+  filterReservePlaceByTimeshare,
+  getAllReservePlaces,
+  getAllCustomerWhoReservePlace,
+  cancelReservePlace,
 };

@@ -369,15 +369,64 @@ const verifyOTPWhenRegister = asyncHandler(async (req, res, next) => {
 //@access private
 const getUsers = asyncHandler(async (req, res, next) => {
   try {
-    const role = await Role.findById(req.user.role_id);
-    if (role.roleName !== "Admin") {
+    if (req.user.roleName !== "Admin") {
       res.status(403);
-      throw new Error("Only Admin have permission to see all User");
+      throw new Error(
+        "Chỉ có Admin có quyền truy xuất thông tin tất cả tài khoản"
+      );
     }
     const users = await User.find().populate("role_id").exec();
-    if (users.length === 0) {
-      res.status(404);
-      throw new Error("Website don't have any member!");
+    if (!users) {
+      res.status(400);
+      throw new Error(
+        "Có lỗi xảy ra khi Admin truy xuất thông tin tất cả tài khoản"
+      );
+    }
+    res.status(200).json(users);
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
+//@desc Get all users
+//@route GET /api/users/investors
+//@access private
+const getInvestors = asyncHandler(async (req, res, next) => {
+  try {
+    const investorRole = await Role.findOne({ roleName: "Investor" });
+    const users = await User.find({ role_id: investorRole._id })
+      .populate("role_id")
+      .exec();
+    if (!users) {
+      res.status(400);
+      throw new Error(
+        "Có lỗi xảy ra khi Admin truy xuất thông tin tất cả tài khoản"
+      );
+    }
+    res.status(200).json(users);
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
+//@desc Get all users
+//@route GET /api/users
+//@access private
+const getStaffs = asyncHandler(async (req, res, next) => {
+  try {
+    const investorRole = await Role.findOne({ roleName: "Staff" });
+    const users = await User.find({ role_id: investorRole._id })
+      .populate("role_id")
+      .exec();
+    if (!users) {
+      res.status(400);
+      throw new Error(
+        "Có lỗi xảy ra khi Admin truy xuất thông tin tất cả tài khoản"
+      );
     }
     res.status(200).json(users);
   } catch (error) {
@@ -402,38 +451,6 @@ const currentUser = asyncHandler(async (req, res) => {
     res
       .status(res.statusCode || 500)
       .send(error.message || "Internal Server Error");
-  }
-});
-
-//@desc Current User Info
-//@route GET /api/users/current
-//@access private
-const searchUserByName = asyncHandler(async (req, res, next) => {
-  try {
-    const fullName = req.query.fullName;
-    if (!fullName || fullName === undefined) {
-      res.status(500);
-      throw new Error(
-        "Something went wrong when pass query to searchUserByName"
-      );
-    }
-    User.find(
-      { fullName: { $regex: fullName, $options: "i" } },
-      (err, users) => {
-        if (err) {
-          // Handle error
-          res.status(500);
-          throw new Error(err.message);
-        } else {
-          // Send the results as a JSON response to the client
-          res.json(users);
-        }
-      }
-    );
-  } catch (error) {
-    res
-      .status(res.statusCode || 500)
-      .send(err.message || "Internal Server Error");
   }
 });
 
@@ -894,10 +911,11 @@ module.exports = {
   registerUser,
   registerStaff,
   getUsers,
+  getInvestors,
+  getStaffs,
   getUserById,
   updateUsers,
   deleteUsers,
-  searchUserByName,
   currentUser,
   checkOldPassword,
   changePassword,

@@ -3,9 +3,23 @@ const RoleEnum = require("../../enum/RoleEnum");
 const Timeshare = require("../models/Timeshare");
 const TimeshareStatus = require("../../enum/TimeshareStatus");
 const SellTimeshareStatus = require("../../enum/SellTimeshareStatus");
-const { default: mongoose } = require("mongoose");
-const ReservePlace = require("../models/ReservePlace");
 const Transaction = require("../models/Transaction");
+const TimeshareImage = require("../models/TimeshareImage");
+
+// @desc create new Timeshare
+// @route POST /timeshares
+// @access Private
+const createTimeshareImage = asyncHandler(async (req, res) => {
+  try {
+    const timeshare_img = new TimeshareImage(req.body);
+    await timeshare_img.save();
+    res.status(200).json(timeshare_img);
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
 
 // @desc create new Timeshare
 // @route POST /timeshares
@@ -353,7 +367,6 @@ const changeSellTimeshareStatus = asyncHandler(async (req, res) => {
 const searchTimeshareByName = asyncHandler(async (req, res, next) => {
   try {
     const searchName = req.query.searchName;
-    console.log(searchName);
     if (!searchName || searchName === undefined) {
       res.status(400);
       throw new Error("Tên timeshare không được trống");
@@ -393,9 +406,17 @@ const deleteTimeshare = asyncHandler(async (req, res) => {
       res.status(404);
       throw new Error("Không tìm thấy timeshare");
     }
-    const isHaveReservePlace = await ReservePlace.findOne({ timeshare_id });
-    const isHaveTransaction = await Transaction.findOne({ timeshare_id });
-    if (isHaveReservePlace || isHaveTransaction) {
+    //the transaction statuses to filter by
+    const desiredStatuses = [
+      TransactionStatus.RESERVING,
+      TransactionStatus.WAITING,
+      TransactionStatus.SELECTED,
+    ];
+    const isHaveTransaction = await Transaction.find({
+      timeshare_id,
+      transaction_status: { $in: desiredStatuses },
+    });
+    if (isHaveTransaction.length > 0) {
       res.status(400);
       throw new Error(
         "Timeshare được đặt chổ hoặc đã có giao dịch. Không thể xóa!"
@@ -415,6 +436,47 @@ const deleteTimeshare = asyncHandler(async (req, res) => {
   }
 });
 
+//@desc Filter Timeshare
+//@route GET /timeshares/filter
+//@access private
+const filterTimeshare = asyncHandler(async (req, res) => {
+  try {
+    const filtersArray = req.body;
+    const timeshares = await Timeshare.find();
+    if (filtersArray.length === 0) {
+      res.status(200).json(timeshares);
+    } else {
+      // Xây dựng query từ filtersArray
+      const query = {};
+
+      filtersArray.forEach((filter) => {
+        const { key, value } = filter;
+
+        if (key && value) {
+          if (key === "year_of_commencement" || key === "year_of_handover") {
+            // Xử lý trường hợp đặc biệt cho các trường năm
+            const [startYear, endYear] = value.split("-");
+
+            if (startYear && endYear) {
+              query[key] = { $gte: startYear, $lte: endYear };
+            }
+          } else {
+            query[key] = value;
+          }
+        }
+      });
+
+      // Thực hiện truy vấn và trả về kết quả
+      const result = await Timeshare.find(query);
+      res.json(result);
+    }
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
 module.exports = {
   createTimeshare,
   getTimeshareById,
@@ -425,4 +487,6 @@ module.exports = {
   changeSellTimeshareStatus,
   searchTimeshareByName,
   deleteTimeshare,
+  filterTimeshare,
+  createTimeshareImage,
 };

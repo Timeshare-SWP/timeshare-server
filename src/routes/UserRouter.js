@@ -8,7 +8,7 @@ const {
   getUserById,
   updateUsers,
   deleteUsers,
-  searchUserByName,
+  searchCustomerByName,
   currentUser,
   changePassword,
   checkOldPassword,
@@ -16,6 +16,8 @@ const {
   resetPassword,
   sendOTPWhenRegister,
   verifyOTPWhenRegister,
+  getInvestors,
+  getStaffs,
 } = require("../app/controllers/UserController");
 const {
   validateToken,
@@ -34,6 +36,10 @@ userRouter.post("/forgotPassword", forgotPassword);
 
 userRouter.post("/resetPassword", resetPassword);
 
+userRouter.get("/investors", getInvestors);
+
+userRouter.get("/staffs", getStaffs);
+
 userRouter.use(validateToken);
 
 //Router for Admin to getAllUsers
@@ -46,8 +52,6 @@ userRouter
   })
 
   .get(getUsers);
-
-userRouter.get("/search", searchUserByName);
 
 userRouter.get("/current", currentUser);
 
