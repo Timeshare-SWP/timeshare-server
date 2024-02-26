@@ -2,7 +2,7 @@ const express = require("express");
 const reservePlaceRouter = express.Router();
 const {
   validateToken,
-  validateTokenInvestor,
+  validateTokenAdmin,
 } = require("../app/middleware/validateTokenHandler");
 const {
   createReservePlace,
@@ -11,6 +11,7 @@ const {
   getAllReservePlaces,
   getAllCustomerWhoReservePlace,
   cancelReservePlace,
+  sortReservePlace,
 } = require("../app/controllers/ReservePlaceController");
 
 reservePlaceRouter.use(validateToken);
@@ -22,6 +23,10 @@ reservePlaceRouter.route("/search").get(searchReservePlaceByTimeshareName);
 reservePlaceRouter.route("/filter").post(filterReservePlaceByTimeshare);
 
 reservePlaceRouter.route("/cancel").delete(cancelReservePlace);
+
+reservePlaceRouter
+  .route("/sortReservePlace")
+  .get(validateTokenAdmin, sortReservePlace);
 
 reservePlaceRouter
   .route("/whoReservePlace/:timeshare_id")

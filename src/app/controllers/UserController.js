@@ -6,6 +6,10 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const moment = require("moment/moment");
 const RoleEnum = require("../../enum/RoleEnum");
+const FilterByEnum = require("../../enum/FilterByEnum");
+const FilterTypeEnum = require("../../enum/FilterTypeEnum");
+const SortByEnum = require("../../enum/SortByEnum");
+const SortTypeEnum = require("../../enum/SortTypeEnum");
 
 //@desc Register New user
 //@route POST /api/users/register
@@ -908,27 +912,6 @@ const resetPassword = asyncHandler(async (req, res, next) => {
   }
 });
 
-const sortAccountByCreatedAt = asyncHandler(async (req, res) => {
-  try {
-    await User.find()
-      .sort({ createdAt: -1 })
-      .exec((err, users) => {
-        if (err) {
-          res.status(500);
-          throw new Error(
-            "Có lỗi xảy ra khi truy xuất tất cả tài khoản theo ngày tạo"
-          );
-        }
-
-        res.status(200).json(users);
-      });
-  } catch (error) {
-    res
-      .status(error.statusCode || 500)
-      .send(error.message || "Internal Server Error");
-  }
-});
-
 const statisticsAccountByStatus = asyncHandler(async (req, res) => {
   try {
     let accounts = await User.find().populate("role_id");
@@ -1007,7 +990,221 @@ const banAccountByAdmin = asyncHandler(async (req, res, next) => {
     }
     res.status(200).json(result);
   } catch (error) {
-    res.status(res.statusCode).send(error.message || "Internal Server Error");
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
+const filterAccount = asyncHandler(async (req, res) => {
+  try {
+    const { filterBy, filterType } = req.query;
+    let accounts = await User.find().populate("role_id");
+    if (!accounts) {
+      res.status(400);
+      throw new Error("Có lỗi xảy ra khi lọc tài khoản");
+    }
+    if (accounts.length === 0) {
+      res.status(200).json([]);
+    }
+    switch (filterBy) {
+      case FilterByEnum.ROLE_NAME: {
+        switch (filterType) {
+          case RoleEnum.CUSTOMER: {
+            accounts = accounts.filter(
+              (account) => account.role_id.roleName === RoleEnum.CUSTOMER
+            );
+            res.status(200).json(accounts);
+            break;
+          }
+          case RoleEnum.INVESTOR: {
+            accounts = accounts.filter(
+              (account) => account.role_id.roleName === RoleEnum.INVESTOR
+            );
+            res.status(200).json(accounts);
+            break;
+          }
+          case RoleEnum.STAFF: {
+            accounts = accounts.filter(
+              (account) => account.role_id.roleName === RoleEnum.STAFF
+            );
+            res.status(200).json(accounts);
+            break;
+          }
+          default: {
+            res.status(400);
+            throw new Error("Vai trò không phù hợp để lọc");
+          }
+        }
+        break;
+      }
+      case FilterByEnum.GENDER: {
+        switch (filterType) {
+          case FilterTypeEnum.MALE: {
+            accounts = accounts.filter(
+              (account) => account.gender === FilterTypeEnum.MALE
+            );
+            res.status(200).json(accounts);
+            break;
+          }
+          case FilterTypeEnum.FEMALE: {
+            accounts = accounts.filter(
+              (account) => account.gender === FilterTypeEnum.FEMALE
+            );
+            res.status(200).json(accounts);
+            break;
+          }
+          case FilterTypeEnum.NOT_UPDATE: {
+            accounts = accounts.filter((account) => !account.gender);
+            res.status(200).json(accounts);
+            break;
+          }
+          default: {
+            res.status(400);
+            throw new Error("Giới tính không phù hợp để lọc");
+          }
+        }
+        break;
+      }
+      case FilterByEnum.STATUS: {
+        switch (filterType) {
+          case FilterTypeEnum.ACTIVE: {
+            accounts = accounts.filter((account) => account.status);
+            res.status(200).json(accounts);
+            break;
+          }
+          case FilterTypeEnum.IN_ACTIVE: {
+            accounts = accounts.filter((account) => !account.status);
+            res.status(200).json(accounts);
+            break;
+          }
+          default: {
+            res.status(400);
+            throw new Error("Giới tính không phù hợp để lọc");
+          }
+        }
+        break;
+      }
+      default: {
+        res.status(400);
+        throw new Error(
+          "Chỉ lọc theo vai trò, giới tính và trạng thái hoạt động"
+        );
+      }
+    }
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
+const sortAccount = asyncHandler(async (req, res) => {
+  const { sortBy, sortType } = req.query;
+  try {
+    switch (sortBy) {
+      case SortByEnum.CREATED_AT: {
+        if (sortType === SortTypeEnum.ASC) {
+          await User.find()
+            .sort({ createdAt: 1 })
+            .exec((err, users) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả tài khoản theo ngày tạo"
+                );
+              }
+              res.status(200).json(users);
+            });
+        } else if (sortType === SortTypeEnum.DESC) {
+          await User.find()
+            .sort({ createdAt: -1 })
+            .exec((err, users) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả tài khoản theo ngày tạo"
+                );
+              }
+              res.status(200).json(users);
+            });
+        } else {
+          res.status(400);
+          throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
+        }
+        break;
+      }
+      case SortByEnum.EMAIL: {
+        if (sortType === SortTypeEnum.ASC) {
+          await User.find()
+            .sort({ email: 1 })
+            .exec((err, users) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả tài khoản theo ngày tạo"
+                );
+              }
+              res.status(200).json(users);
+            });
+        } else if (sortType === SortTypeEnum.DESC) {
+          await User.find()
+            .sort({ email: -1 })
+            .exec((err, users) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả tài khoản theo ngày tạo"
+                );
+              }
+              res.status(200).json(users);
+            });
+        } else {
+          res.status(400);
+          throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
+        }
+        break;
+      }
+      case SortByEnum.FULL_NAME: {
+        if (sortType === SortTypeEnum.ASC) {
+          await User.find()
+            .sort({ fullName: 1 })
+            .exec((err, users) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả tài khoản theo ngày tạo"
+                );
+              }
+              res.status(200).json(users);
+            });
+        } else if (sortType === SortTypeEnum.DESC) {
+          await User.find()
+            .sort({ fullName: -1 })
+            .exec((err, users) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả tài khoản theo ngày tạo"
+                );
+              }
+              res.status(200).json(users);
+            });
+        } else {
+          res.status(400);
+          throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
+        }
+        break;
+      }
+      default: {
+        res.status(400);
+        throw new Error("Chỉ sort theo tên, email và ngày tạo tài khoản");
+      }
+    }
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .send(error.message || "Internal Server Error");
   }
 });
 
@@ -1027,8 +1224,9 @@ module.exports = {
   resetPassword,
   sendOTPWhenRegister,
   verifyOTPWhenRegister,
-  sortAccountByCreatedAt,
   statisticsAccountByStatus,
   searchAccountByEmail,
   banAccountByAdmin,
+  sortAccount,
+  filterAccount,
 };

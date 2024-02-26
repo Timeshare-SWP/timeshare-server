@@ -9,6 +9,8 @@ const TransactionStatus = require("../../enum/TransactionStatus");
 const RoleEnum = require("../../enum/RoleEnum");
 const SellTimeshareStatus = require("../../enum/SellTimeshareStatus");
 const moment = require("moment");
+const SortTypeEnum = require("../../enum/SortTypeEnum");
+const SortByEnum = require("../../enum/SortByEnum");
 
 //@desc search Customer By Name
 //@route GET /api/transactions/searchCustomerToInvite
@@ -194,7 +196,7 @@ const buyTimeshare = asyncHandler(async (req, res) => {
       throw new Error("Chỉ có khách hàng có thể mua timeshare");
     }
     const { timeshare_id, transaction_id, is_reserve } = req.body;
-    if (!is_reserve) {
+    if (is_reserve === undefined) {
       res.status(400);
       throw new Error("Không được bỏ trống các thành  phần bắt buộc");
     }
@@ -241,11 +243,11 @@ const buyTimeshare = asyncHandler(async (req, res) => {
         throw new Error("Không tìm thấy timeshare");
       }
       const transaction = new Transaction({
-        transaction_id,
-        transaction_id_status: TransactionStatus.WAITING,
+        timeshare_id,
+        transaction_status: TransactionStatus.WAITING,
       });
       transaction.customers = new Array();
-      transaction.customers.pus(req.user.id);
+      transaction.customers.push(req.user.id);
       const result = await transaction.save();
       if (!result) {
         res.status(500);
@@ -586,6 +588,105 @@ const statisticsTransactionByStatus = asyncHandler(async (req, res) => {
   }
 });
 
+const sortTransaction = asyncHandler(async (req, res) => {
+  const { sortBy, sortType } = req.query;
+  try {
+    const transaction_status = [
+      TransactionStatus.WAITING,
+      TransactionStatus.SELECTED,
+      TransactionStatus.REJECTED,
+    ];
+    switch (sortBy) {
+      case SortByEnum.CREATED_AT: {
+        if (sortType === SortTypeEnum.ASC) {
+          await Transaction.find({
+            transaction_status: { $in: transaction_status },
+          })
+            .sort({ createdAt: 1 })
+            .populate("timeshare_id")
+            .populate("customers")
+            .exec((err, reservePlaces) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả giao dịch theo ngày tạo"
+                );
+              }
+              res.status(200).json(reservePlaces);
+            });
+        } else if (sortType === SortTypeEnum.DESC) {
+          await Transaction.find({
+            transaction_status: { $in: transaction_status },
+          })
+            .sort({ createdAt: -1 })
+            .populate("timeshare_id")
+            .populate("customers")
+            .exec((err, reservePlaces) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả giao dịch theo ngày tạo"
+                );
+              }
+              res.status(200).json(reservePlaces);
+            });
+        } else {
+          res.status(400);
+          throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
+        }
+        break;
+      }
+      case SortByEnum.TOTAL_MONEY: {
+        if (sortType === SortTypeEnum.ASC) {
+          let transactions = await Transaction.find({
+            transaction_status: { $in: transaction_status },
+          })
+            .populate("timeshare_id")
+            .populate("customers");
+          transactions.forEach((transaction) => {
+            if (!transaction.reservation_price) {
+              transaction.total_money = transaction.timeshare_id.price;
+            } else {
+              transaction.total_money =
+                transaction.timeshare_id.price + transaction.reservation_price;
+            }
+          });
+          transactions.sort((a, b) => a.total_money - b.total_money);
+          res.status(200).json(transactions);
+        } else if (sortType === SortTypeEnum.DESC) {
+          let transactions = await Transaction.find({
+            transaction_status: { $in: transaction_status },
+          })
+            .populate("timeshare_id")
+            .populate("customers");
+          transactions.forEach((transaction) => {
+            if (!transaction.reservation_price) {
+              transaction.total_money = transaction.timeshare_id.price;
+            } else {
+              transaction.total_money =
+                transaction.timeshare_id.price + transaction.reservation_price;
+            }
+          });
+          transactions.sort((a, b) => b.total_money - a.total_money);
+          res.status(200).json(transactions);
+        } else {
+          res.status(400);
+          throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
+        }
+        break;
+      }
+      default: {
+        res.status(400);
+        throw new Error("Chỉ sort theo tổng tiền và ngày tạo giao dịch");
+      }
+    }
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
 module.exports = {
   searchCustomerByName,
   inviteCustomerJoinTimeshare,
@@ -596,4 +697,5 @@ module.exports = {
   filterTransactionByTimeshare,
   confirmSellTimeshare,
   statisticsTransactionByStatus,
+  sortTransaction,
 };

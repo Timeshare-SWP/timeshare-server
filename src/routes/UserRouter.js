@@ -8,7 +8,6 @@ const {
   getUserById,
   updateUsers,
   deleteUsers,
-  searchCustomerByName,
   currentUser,
   changePassword,
   checkOldPassword,
@@ -18,10 +17,11 @@ const {
   verifyOTPWhenRegister,
   getInvestors,
   getStaffs,
-  sortAccountByCreatedAt,
   statisticsAccountByStatus,
   searchAccountByEmail,
   banAccountByAdmin,
+  sortAccount,
+  filterAccount,
 } = require("../app/controllers/UserController");
 const {
   validateToken,
@@ -59,7 +59,9 @@ userRouter
 
 userRouter.get("/current", currentUser);
 
-userRouter.route("/sortByCreatedAt").get(sortAccountByCreatedAt);
+userRouter.route("/sortAccount").get(validateTokenAdmin, sortAccount);
+
+userRouter.route("/filterAccount").get(validateTokenAdmin, filterAccount);
 
 userRouter
   .route("/statisticsAccount")

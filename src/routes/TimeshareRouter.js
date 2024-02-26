@@ -15,6 +15,7 @@ const {
   statisticsTimeshareByStatus,
   statisticsTimeshareBySellTimeshareStatus,
   statisticTimeshareByMonth,
+  sortTimeshare,
 } = require("../app/controllers/TimeshareController");
 const {
   validateToken,
@@ -53,6 +54,8 @@ timeshareRouter
 timeshareRouter
   .route("/statisticTimeshareByMonth")
   .get(validateTokenAdmin, statisticTimeshareByMonth);
+
+timeshareRouter.route("/sortTimeshare").get(validateTokenAdmin, sortTimeshare);
 
 timeshareRouter
   .route("/:timeshare_id")

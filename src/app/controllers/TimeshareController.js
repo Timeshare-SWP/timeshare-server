@@ -6,6 +6,8 @@ const SellTimeshareStatus = require("../../enum/SellTimeshareStatus");
 const Transaction = require("../models/Transaction");
 const TimeshareImage = require("../models/TimeshareImage");
 const moment = require("moment");
+const SortTypeEnum = require("../../enum/SortTypeEnum");
+const SortByEnum = require("../../enum/SortByEnum");
 
 // @desc create new Timeshare
 // @route POST /timeshares
@@ -478,27 +480,6 @@ const filterTimeshare = asyncHandler(async (req, res) => {
   }
 });
 
-const sortTimeshareByCreatedAt = asyncHandler(async (req, res) => {
-  try {
-    await Timeshare.find()
-      .sort({ createdAt: -1 })
-      .exec((err, timeshares) => {
-        if (err) {
-          res.status(500);
-          throw new Error(
-            "Có lỗi xảy ra khi truy xuất tất cả tài khoản theo ngày tạo"
-          );
-        }
-
-        res.status(200).json(timeshares);
-      });
-  } catch (error) {
-    res
-      .status(error.statusCode || 500)
-      .send(error.message || "Internal Server Error");
-  }
-});
-
 const statisticsTimeshareByStatus = asyncHandler(async (req, res) => {
   try {
     const timeshares = await Timeshare.find();
@@ -585,6 +566,199 @@ const statisticTimeshareByMonth = asyncHandler(async (req, res) => {
   }
 });
 
+const sortTimeshare = asyncHandler(async (req, res) => {
+  const { sortBy, sortType } = req.query;
+  try {
+    switch (sortBy) {
+      case SortByEnum.CREATED_AT: {
+        if (sortType === SortTypeEnum.ASC) {
+          await Timeshare.find()
+            .sort({ createdAt: 1 })
+            .populate("investor_id")
+            .populate("timeshare_image")
+            .exec((err, timeshares) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả timeshare theo ngày tạo"
+                );
+              }
+              res.status(200).json(timeshares);
+            });
+        } else if (sortType === SortTypeEnum.DESC) {
+          await Timeshare.find()
+            .sort({ createdAt: -1 })
+            .populate("investor_id")
+            .populate("timeshare_image")
+            .exec((err, timeshares) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả timeshare theo ngày tạo"
+                );
+              }
+              res.status(200).json(timeshares);
+            });
+        } else {
+          res.status(400);
+          throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
+        }
+        break;
+      }
+      case SortByEnum.TIMESHARE_NAME: {
+        if (sortType === SortTypeEnum.ASC) {
+          await Timeshare.find()
+            .sort({ timeshare_name: 1 })
+            .populate("investor_id")
+            .populate("timeshare_image")
+            .exec((err, timeshares) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả timeshare theo tên timeshare"
+                );
+              }
+              res.status(200).json(timeshares);
+            });
+        } else if (sortType === SortTypeEnum.DESC) {
+          await Timeshare.find()
+            .sort({ timeshare_name: -1 })
+            .populate("investor_id")
+            .populate("timeshare_image")
+            .exec((err, timeshares) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả timeshare theo tên timeshare"
+                );
+              }
+              res.status(200).json(timeshares);
+            });
+        } else {
+          res.status(400);
+          throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
+        }
+        break;
+      }
+      case SortByEnum.PRICE: {
+        if (sortType === SortTypeEnum.ASC) {
+          await Timeshare.find()
+            .sort({ price: 1 })
+            .populate("investor_id")
+            .populate("timeshare_image")
+            .exec((err, timeshares) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả timeshare theo giá timesshare"
+                );
+              }
+              res.status(200).json(timeshares);
+            });
+        } else if (sortType === SortTypeEnum.DESC) {
+          await Timeshare.find()
+            .sort({ price: -1 })
+            .populate("investor_id")
+            .populate("timeshare_image")
+            .exec((err, timeshares) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả timeshare theo giá timesshare"
+                );
+              }
+              res.status(200).json(timeshares);
+            });
+        } else {
+          res.status(400);
+          throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
+        }
+        break;
+      }
+      case SortByEnum.YEAR_OF_COMMENCEMENT: {
+        if (sortType === SortTypeEnum.ASC) {
+          await Timeshare.find()
+            .sort({ year_of_commencement: 1 })
+            .populate("investor_id")
+            .populate("timeshare_image")
+            .exec((err, timeshares) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả timeshare theo năm bắt đầu"
+                );
+              }
+              res.status(200).json(timeshares);
+            });
+        } else if (sortType === SortTypeEnum.DESC) {
+          await Timeshare.find()
+            .sort({ year_of_commencement: -1 })
+            .populate("investor_id")
+            .populate("timeshare_image")
+            .exec((err, timeshares) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả timeshare theo năm bắt đầu"
+                );
+              }
+              res.status(200).json(timeshares);
+            });
+        } else {
+          res.status(400);
+          throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
+        }
+        break;
+      }
+      case SortByEnum.YEAR_OF_HANDOVER: {
+        if (sortType === SortTypeEnum.ASC) {
+          await Timeshare.find()
+            .sort({ year_of_handover: 1 })
+            .populate("investor_id")
+            .populate("timeshare_image")
+            .exec((err, timeshares) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả timeshare theo năm bàn giao"
+                );
+              }
+              res.status(200).json(timeshares);
+            });
+        } else if (sortType === SortTypeEnum.DESC) {
+          await Timeshare.find()
+            .sort({ year_of_handover: -1 })
+            .populate("investor_id")
+            .populate("timeshare_image")
+            .exec((err, timeshares) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả timeshare theo năm bàn giao"
+                );
+              }
+              res.status(200).json(timeshares);
+            });
+        } else {
+          res.status(400);
+          throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
+        }
+        break;
+      }
+      default: {
+        res.status(400);
+        throw new Error(
+          "Chỉ sort theo tên, giá, năm bắt đầu, năm bàn giao và ngày tạo timeshare"
+        );
+      }
+    }
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
 module.exports = {
   createTimeshare,
   getTimeshareById,
@@ -597,8 +771,8 @@ module.exports = {
   deleteTimeshare,
   filterTimeshare,
   createTimeshareImage,
-  sortTimeshareByCreatedAt,
   statisticsTimeshareByStatus,
   statisticsTimeshareBySellTimeshareStatus,
   statisticTimeshareByMonth,
+  sortTimeshare,
 };

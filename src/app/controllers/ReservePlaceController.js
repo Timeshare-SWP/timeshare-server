@@ -5,6 +5,8 @@ const SellTimeshareStatus = require("../../enum/SellTimeshareStatus");
 const Transaction = require("../models/Transaction");
 const TransactionStatus = require("../../enum/TransactionStatus");
 const { default: mongoose } = require("mongoose");
+const SortTypeEnum = require("../../enum/SortTypeEnum");
+const SortByEnum = require("../../enum/SortByEnum");
 
 //@desc Create new ReservePlace
 //@route POST /reservePlaces
@@ -269,10 +271,15 @@ const getAllReservePlaces = asyncHandler(async (req, res) => {
 //@access private
 const getAllCustomerWhoReservePlace = asyncHandler(async (req, res) => {
   try {
+    const transaction_status_reserve = [
+      TransactionStatus.RESERVING,
+      TransactionStatus.UNRESERVE,
+    ];
     const { timeshare_id } = req.params;
-    const reservePlaces = await Transaction.find({ timeshare_id }).populate(
-      "customers"
-    );
+    const reservePlaces = await Transaction.find({
+      timeshare_id,
+      transaction_status: { $in: transaction_status_reserve },
+    }).populate("customers");
     if (!reservePlaces) {
       res.status(400);
       throw new Error(
@@ -326,6 +333,145 @@ const cancelReservePlace = asyncHandler(async (req, res) => {
   }
 });
 
+const sortReservePlace = asyncHandler(async (req, res) => {
+  const { sortBy, sortType } = req.query;
+  try {
+    const transaction_status_reserve = [
+      TransactionStatus.RESERVING,
+      TransactionStatus.UNRESERVE,
+    ];
+    switch (sortBy) {
+      case SortByEnum.CREATED_AT: {
+        if (sortType === SortTypeEnum.ASC) {
+          await Transaction.find({
+            transaction_status: { $in: transaction_status_reserve },
+          })
+            .sort({ createdAt: 1 })
+            .populate("timeshare_id")
+            .populate("customers")
+            .exec((err, reservePlaces) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả giao dịch giữ chổ theo ngày tạo"
+                );
+              }
+              res.status(200).json(reservePlaces);
+            });
+        } else if (sortType === SortTypeEnum.DESC) {
+          await Transaction.find({
+            transaction_status: { $in: transaction_status_reserve },
+          })
+            .sort({ createdAt: -1 })
+            .populate("timeshare_id")
+            .populate("customers")
+            .exec((err, reservePlaces) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả giao dịch giữ chổ theo ngày tạo"
+                );
+              }
+              res.status(200).json(reservePlaces);
+            });
+        } else {
+          res.status(400);
+          throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
+        }
+        break;
+      }
+      case SortByEnum.RESERVATION_PRICE: {
+        if (sortType === SortTypeEnum.ASC) {
+          await Transaction.find({
+            transaction_status: { $in: transaction_status_reserve },
+          })
+            .sort({ reservation_price: 1 })
+            .populate("timeshare_id")
+            .populate("customers")
+            .exec((err, reservePlaces) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả giao dịch giữ chổ theo tiền giữ chổ"
+                );
+              }
+              res.status(200).json(reservePlaces);
+            });
+        } else if (sortType === SortTypeEnum.DESC) {
+          await Transaction.find({
+            transaction_status: { $in: transaction_status_reserve },
+          })
+            .sort({ reservation_price: -1 })
+            .populate("timeshare_id")
+            .populate("customers")
+            .exec((err, reservePlaces) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả giao dịch giữ chổ theo tiền giữ chổ"
+                );
+              }
+              res.status(200).json(reservePlaces);
+            });
+        } else {
+          res.status(400);
+          throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
+        }
+        break;
+      }
+      case SortByEnum.RESERVATION_TIME: {
+        if (sortType === SortTypeEnum.ASC) {
+          await Transaction.find({
+            transaction_status: { $in: transaction_status_reserve },
+          })
+            .sort({ reservation_time: 1 })
+            .populate("timeshare_id")
+            .populate("customers")
+            .exec((err, reservePlaces) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả giao dịch giữ chổ theo ngày giữ chổ"
+                );
+              }
+              res.status(200).json(reservePlaces);
+            });
+        } else if (sortType === SortTypeEnum.DESC) {
+          await Transaction.find({
+            transaction_status: { $in: transaction_status_reserve },
+          })
+            .sort({ reservation_time: -1 })
+            .populate("timeshare_id")
+            .populate("customers")
+            .exec((err, reservePlaces) => {
+              if (err) {
+                res.status(500);
+                throw new Error(
+                  "Có lỗi xảy ra khi truy xuất tất cả giao dịch giữ chổ theo ngày giữ chổ"
+                );
+              }
+              res.status(200).json(reservePlaces);
+            });
+        } else {
+          res.status(400);
+          throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
+        }
+        break;
+      }
+      default: {
+        res.status(400);
+        throw new Error(
+          "Chỉ sort theo tiền giữ chổ, ngày giữ chổ và ngày tạo giao dịch giữ chổ"
+        );
+      }
+    }
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
 module.exports = {
   createReservePlace,
   searchReservePlaceByTimeshareName,
@@ -333,4 +479,5 @@ module.exports = {
   getAllReservePlaces,
   getAllCustomerWhoReservePlace,
   cancelReservePlace,
+  sortReservePlace,
 };

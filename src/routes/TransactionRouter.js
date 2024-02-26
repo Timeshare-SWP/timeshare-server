@@ -1,6 +1,5 @@
 const express = require("express");
 const transactionRouter = express.Router();
-
 const {
   validateToken,
   validateTokenAdmin,
@@ -15,6 +14,7 @@ const {
   filterTransactionByTimeshare,
   confirmSellTimeshare,
   statisticsTransactionByStatus,
+  sortTransaction,
 } = require("../app/controllers/TransactionController");
 
 transactionRouter.use(validateToken);
@@ -36,6 +36,10 @@ transactionRouter.route("/confirmSellTimeshare").patch(confirmSellTimeshare);
 transactionRouter
   .route("/statisticTransactionByStatus")
   .get(validateTokenAdmin, statisticsTransactionByStatus);
+
+transactionRouter
+  .route("/sortTransaction")
+  .get(validateTokenAdmin, sortTransaction);
 
 transactionRouter
   .route("/replyTransactionInvite")
