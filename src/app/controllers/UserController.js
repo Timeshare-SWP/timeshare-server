@@ -375,13 +375,14 @@ const getUsers = asyncHandler(async (req, res, next) => {
         "Chỉ có Admin có quyền truy xuất thông tin tất cả tài khoản"
       );
     }
-    const users = await User.find().populate("role_id").exec();
+    let users = await User.find().populate("role_id").exec();
     if (!users) {
       res.status(400);
       throw new Error(
         "Có lỗi xảy ra khi Admin truy xuất thông tin tất cả tài khoản"
       );
     }
+    users = users.filter((user) => user.role_id.roleName !== RoleEnum.ADMIN);
     res.status(200).json(users);
   } catch (error) {
     res
@@ -907,6 +908,109 @@ const resetPassword = asyncHandler(async (req, res, next) => {
   }
 });
 
+const sortAccountByCreatedAt = asyncHandler(async (req, res) => {
+  try {
+    await User.find()
+      .sort({ createdAt: -1 })
+      .exec((err, users) => {
+        if (err) {
+          res.status(500);
+          throw new Error(
+            "Có lỗi xảy ra khi truy xuất tất cả tài khoản theo ngày tạo"
+          );
+        }
+
+        res.status(200).json(users);
+      });
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
+const statisticsAccountByStatus = asyncHandler(async (req, res) => {
+  try {
+    let accounts = await User.find().populate("role_id");
+    if (!accounts || accounts.length === 0) {
+      return null;
+    }
+    accounts = accounts.filter(
+      (account) => account.role_id.roleName !== RoleEnum.ADMIN
+    );
+    const tmpCountData = {
+      Active: 0,
+      InActive: 0,
+    };
+
+    accounts.forEach((account) => {
+      if (account.status) {
+        tmpCountData["Active"] = tmpCountData["Active"] + 1;
+      } else {
+        tmpCountData["InActive"] = tmpCountData["InActive"] + 1;
+      }
+    });
+
+    const result = Object.keys(tmpCountData).map((key) => ({
+      key,
+      value: tmpCountData[key],
+    }));
+    res.status(200).json(result);
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
+const searchAccountByEmail = asyncHandler(async (req, res, next) => {
+  try {
+    const searchEmail = req.query.searchEmail;
+    if (!searchEmail || searchEmail === undefined) {
+      res.status(400);
+      throw new Error("Không được để trống thông tin yêu cầu");
+    }
+    let users = await User.find({
+      email: { $regex: searchEmail, $options: "i" },
+    }).populate("role_id");
+    if (!users) {
+      res.status(500);
+      throw new Error("Có lỗi xảy ra khi tìm kiếm tài khoản theo email");
+    }
+    users = users.filter((user) => user.role_id.roleName !== RoleEnum.ADMIN);
+    // Send the results as a JSON response to the client
+    res.json(users);
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
+const banAccountByAdmin = asyncHandler(async (req, res, next) => {
+  try {
+    const { account_id } = req.params;
+    const user = await User.findById(account_id).populate("role_id").exec();
+    if (!user) {
+      res.status(404);
+      throw new Error("Không tìm thấy tài khoản!");
+    }
+    if (user.role_id.roleName === RoleEnum.ADMIN) {
+      res.status(400);
+      throw new Error("Không thể khóa tài khoản admin");
+    }
+    user.status = false;
+    const result = await user.save();
+    if (!result) {
+      res.status(500);
+      throw new Error("Có lỗi xảy ra khi khóa tài khoản");
+    }
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(res.statusCode).send(error.message || "Internal Server Error");
+  }
+});
+
 module.exports = {
   registerUser,
   registerStaff,
@@ -923,4 +1027,8 @@ module.exports = {
   resetPassword,
   sendOTPWhenRegister,
   verifyOTPWhenRegister,
+  sortAccountByCreatedAt,
+  statisticsAccountByStatus,
+  searchAccountByEmail,
+  banAccountByAdmin,
 };

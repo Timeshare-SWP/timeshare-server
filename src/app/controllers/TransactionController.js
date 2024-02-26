@@ -8,6 +8,7 @@ const Timeshare = require("../models/Timeshare");
 const TransactionStatus = require("../../enum/TransactionStatus");
 const RoleEnum = require("../../enum/RoleEnum");
 const SellTimeshareStatus = require("../../enum/SellTimeshareStatus");
+const moment = require("moment");
 
 //@desc search Customer By Name
 //@route GET /api/transactions/searchCustomerToInvite
@@ -16,8 +17,8 @@ const searchCustomerByName = asyncHandler(async (req, res, next) => {
   try {
     const fullName = req.query.fullName;
     if (!fullName || fullName === undefined) {
-      res.status(500);
-      throw new Error("Có lỗi xảy ra khi tìm kiếm khách hàng theo tên");
+      res.status(400);
+      throw new Error("Không được để trống thông tin yêu cầu");
     }
     const customerRole = await Role.findOne({ roleName: RoleEnum.CUSTOMER });
     User.find(
@@ -29,7 +30,7 @@ const searchCustomerByName = asyncHandler(async (req, res, next) => {
         if (err) {
           // Handle error
           res.status(500);
-          throw new Error(error.message);
+          throw new Error("Có lỗi xảy ra khi tìm kiếm khách hàng theo tên");
         } else {
           // Send the results as a JSON response to the client
           res.json(users);
@@ -554,6 +555,37 @@ const confirmSellTimeshare = asyncHandler(async (req, res) => {
   }
 });
 
+const statisticsTransactionByStatus = asyncHandler(async (req, res) => {
+  try {
+    const transactions = await Transaction.find();
+    if (!transactions || transactions.length === 0) {
+      return null;
+    }
+    const tmpCountData = {
+      Reserving: 0,
+      Unreserve: 0,
+      Waiting: 0,
+      Selected: 0,
+      Rejected: 0,
+    };
+
+    transactions.forEach((timeshare) => {
+      const transaction_status = timeshare.transaction_status;
+      tmpCountData[transaction_status] = tmpCountData[transaction_status] + 1;
+    });
+
+    const result = Object.keys(tmpCountData).map((key) => ({
+      key,
+      value: tmpCountData[key],
+    }));
+    res.status(200).json(result);
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
 module.exports = {
   searchCustomerByName,
   inviteCustomerJoinTimeshare,
@@ -563,4 +595,5 @@ module.exports = {
   searchTransactionByTimeshareName,
   filterTransactionByTimeshare,
   confirmSellTimeshare,
+  statisticsTransactionByStatus,
 };

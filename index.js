@@ -43,6 +43,7 @@ const transactionRouter = require("./src/routes/TransactionRouter");
 const contractRouter = require("./src/routes/ContractRouter");
 const phaseRouter = require("./src/routes/PhaseRouter");
 const notificationRouter = require("./src/routes/NotificationRouter");
+const feedbackRouter = require("./src/routes/FeedbackRouter");
 
 //static folder path
 app.use(express.static(path.resolve(__dirname, "public")));
@@ -56,6 +57,7 @@ app.use("/api/transactions", transactionRouter);
 app.use("/api/contracts", contractRouter);
 app.use("/api/phases", phaseRouter);
 app.use("/api/notifications", notificationRouter);
+app.use("/api/feedbacks", feedbackRouter);
 
 // Global error handler
 app.use(errorHandler);

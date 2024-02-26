@@ -18,6 +18,10 @@ const {
   verifyOTPWhenRegister,
   getInvestors,
   getStaffs,
+  sortAccountByCreatedAt,
+  statisticsAccountByStatus,
+  searchAccountByEmail,
+  banAccountByAdmin,
 } = require("../app/controllers/UserController");
 const {
   validateToken,
@@ -55,6 +59,16 @@ userRouter
 
 userRouter.get("/current", currentUser);
 
+userRouter.route("/sortByCreatedAt").get(sortAccountByCreatedAt);
+
+userRouter
+  .route("/statisticsAccount")
+  .get(validateTokenAdmin, statisticsAccountByStatus);
+
+userRouter
+  .route("/searchAccountByEmail")
+  .get(validateTokenAdmin, searchAccountByEmail);
+
 //Router for getUserByID, updateUser, deleteUser
 userRouter
   .route("/:id")
@@ -73,5 +87,9 @@ userRouter
 userRouter.route("/checkOldPassword/:id").post(checkOldPassword);
 
 userRouter.route("/changePassword/:id").put(changePassword);
+
+userRouter
+  .route("/banAccountByAdmin/:account_id")
+  .patch(validateTokenAdmin, banAccountByAdmin);
 
 module.exports = userRouter;

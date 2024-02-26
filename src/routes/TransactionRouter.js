@@ -1,7 +1,10 @@
 const express = require("express");
 const transactionRouter = express.Router();
 
-const { validateToken } = require("../app/middleware/validateTokenHandler");
+const {
+  validateToken,
+  validateTokenAdmin,
+} = require("../app/middleware/validateTokenHandler");
 const {
   searchCustomerByName,
   inviteCustomerJoinTimeshare,
@@ -11,6 +14,7 @@ const {
   searchTransactionByTimeshareName,
   filterTransactionByTimeshare,
   confirmSellTimeshare,
+  statisticsTransactionByStatus,
 } = require("../app/controllers/TransactionController");
 
 transactionRouter.use(validateToken);
@@ -28,6 +32,10 @@ transactionRouter.route("/search").get(searchTransactionByTimeshareName);
 transactionRouter.route("/filter").post(filterTransactionByTimeshare);
 
 transactionRouter.route("/confirmSellTimeshare").patch(confirmSellTimeshare);
+
+transactionRouter
+  .route("/statisticTransactionByStatus")
+  .get(validateTokenAdmin, statisticsTransactionByStatus);
 
 transactionRouter
   .route("/replyTransactionInvite")

@@ -5,6 +5,7 @@ const TimeshareStatus = require("../../enum/TimeshareStatus");
 const SellTimeshareStatus = require("../../enum/SellTimeshareStatus");
 const Transaction = require("../models/Transaction");
 const TimeshareImage = require("../models/TimeshareImage");
+const moment = require("moment");
 
 // @desc create new Timeshare
 // @route POST /timeshares
@@ -477,6 +478,113 @@ const filterTimeshare = asyncHandler(async (req, res) => {
   }
 });
 
+const sortTimeshareByCreatedAt = asyncHandler(async (req, res) => {
+  try {
+    await Timeshare.find()
+      .sort({ createdAt: -1 })
+      .exec((err, timeshares) => {
+        if (err) {
+          res.status(500);
+          throw new Error(
+            "Có lỗi xảy ra khi truy xuất tất cả tài khoản theo ngày tạo"
+          );
+        }
+
+        res.status(200).json(timeshares);
+      });
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
+const statisticsTimeshareByStatus = asyncHandler(async (req, res) => {
+  try {
+    const timeshares = await Timeshare.find();
+    if (!timeshares || timeshares.length === 0) {
+      return null;
+    }
+    const tmpCountData = {
+      "Sắp triển khai": 0,
+      "Đang triển khai": 0,
+      "Đã triển khai": 0,
+    };
+
+    timeshares.forEach((timeshare) => {
+      const timeshare_status = timeshare.timeshare_status;
+      tmpCountData[timeshare_status] = tmpCountData[timeshare_status] + 1;
+    });
+
+    const result = Object.keys(tmpCountData).map((key) => ({
+      key,
+      value: tmpCountData[key],
+    }));
+    res.status(200).json(result);
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
+const statisticsTimeshareBySellTimeshareStatus = asyncHandler(
+  async (req, res) => {
+    try {
+      const timeshares = await Timeshare.find();
+      if (!timeshares || timeshares.length === 0) {
+        return null;
+      }
+      const tmpCountData = {
+        "Chưa được bán": 0,
+        "Đang mở bán": 0,
+        "Đã bán": 0,
+      };
+
+      timeshares.forEach((timeshare) => {
+        const sell_timeshare_status = timeshare.sell_timeshare_status;
+        tmpCountData[sell_timeshare_status] =
+          tmpCountData[sell_timeshare_status] + 1;
+      });
+
+      const result = Object.keys(tmpCountData).map((key) => ({
+        key,
+        value: tmpCountData[key],
+      }));
+      res.status(200).json(result);
+    } catch (error) {
+      res
+        .status(error.statusCode || 500)
+        .send(error.message || "Internal Server Error");
+    }
+  }
+);
+
+const statisticTimeshareByMonth = asyncHandler(async (req, res) => {
+  try {
+    const timeshares = await Timeshare.aggregate([
+      {
+        $project: {
+          month: { $month: "$createdAt" },
+        },
+      },
+    ]);
+    if (!timeshares) {
+      return null;
+    }
+    let result = new Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    timeshares.forEach((timeshare) => {
+      const month = timeshare.month;
+      result[month - 1] += 1;
+    });
+    res.status(200).send(result);
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
 module.exports = {
   createTimeshare,
   getTimeshareById,
@@ -489,4 +597,8 @@ module.exports = {
   deleteTimeshare,
   filterTimeshare,
   createTimeshareImage,
+  sortTimeshareByCreatedAt,
+  statisticsTimeshareByStatus,
+  statisticsTimeshareBySellTimeshareStatus,
+  statisticTimeshareByMonth,
 };
