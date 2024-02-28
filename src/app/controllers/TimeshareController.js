@@ -58,7 +58,6 @@ const createTimeshare = asyncHandler(async (req, res) => {
     res.status(400);
     throw new Error("Có lỗi xảy ra khi tạo timeshare mới");
   }
-  timeshare.timeshare_status = TimeshareStatus.TO_IMPLEMENT;
   timeshare.sell_timeshare_status = SellTimeshareStatus.NOT_YET_SOLD;
   timeshare.investor_id = req.user.id.toString();
   const year_of_commencement = Number.parseInt(req.body.year_of_commencement);

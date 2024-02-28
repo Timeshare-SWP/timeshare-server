@@ -1,4 +1,5 @@
 const FilterTypeEnum = {
+  //Account
   MALE: "Male",
   FEMALE: "Female",
   NOT_UPDATE: "Chưa cập nhật",
