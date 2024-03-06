@@ -511,7 +511,7 @@ const confirmSellTimeshare = asyncHandler(async (req, res) => {
       res.status(403);
       throw new Error("Chỉ có chủ đầu tư có quyền chọn bán timeshare");
     }
-    const { transaction_id } = req.query;
+    const { transaction_id, transaction_status } = req.query;
     const chosenTransaction = await Transaction.findById(transaction_id)
       .populate("customers")
       .populate({
@@ -538,44 +538,57 @@ const confirmSellTimeshare = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error("Trạng thái giao dịch không phù hợp để chọn bán");
     }
-    const updatedTransactions = await Transaction.updateMany(
-      {
-        timeshare_id: chosenTransaction.timeshare_id,
-        transaction_status: TransactionStatus.WAITING,
-      },
-      [
+    if (transaction_status === TransactionStatus.SELECTED) {
+      const updatedTransactions = await Transaction.updateMany(
         {
-          $set: {
-            transaction_status: {
-              $cond: {
-                if: { $eq: ["$_id", chosenTransaction._id] },
-                then: TransactionStatus.SELECTED,
-                else: TransactionStatus.REJECTED,
+          timeshare_id: chosenTransaction.timeshare_id,
+          transaction_status: TransactionStatus.WAITING,
+        },
+        [
+          {
+            $set: {
+              transaction_status: {
+                $cond: {
+                  if: { $eq: ["$_id", chosenTransaction._id] },
+                  then: TransactionStatus.SELECTED,
+                  else: TransactionStatus.REJECTED,
+                },
               },
             },
           },
-        },
-      ]
-    );
-    if (!updatedTransactions) {
-      res.status(500);
-      throw new Error("Có lỗi xảy ra khi chọn bán timeshare");
-    }
-    const timeshare = await Timeshare.findById(
-      chosenTransaction.timeshare_id._id
-    );
-    if (!timeshare) {
+        ]
+      );
+      if (!updatedTransactions) {
+        res.status(500);
+        throw new Error("Có lỗi xảy ra khi chọn bán timeshare");
+      }
+      const timeshare = await Timeshare.findById(
+        chosenTransaction.timeshare_id._id
+      );
+      if (!timeshare) {
+        res.status(400);
+        throw new Error("Có lỗi xảy ra khi cập nhật lại trạng thái timeshare");
+      }
+      timeshare.sell_timeshare_status = SellTimeshareStatus.SOLD;
+      const result = await timeshare.save();
+      if (!result) {
+        res.status(500);
+        throw new Error("Có lỗi xảy ra khi cập nhật lại trạng thái timeshare");
+      }
+      chosenTransaction.transaction_status = TransactionStatus.SELECTED;
+      res.status(200).json(chosenTransaction);
+    } else if (transaction_status === TransactionStatus.REJECTED) {
+      chosenTransaction.transaction_status = transaction_status;
+      const updatedTransactions = await chosenTransaction.save();
+      if (!updatedTransactions) {
+        res.status(500);
+        throw new Error("Có lỗi xảy ra khi từ chối bán timeshare");
+      }
+      res.status(200).json(updatedTransactions);
+    } else {
       res.status(400);
-      throw new Error("Có lỗi xảy ra khi cập nhật lại trạng thái timeshare");
+      throw new Error("Trạng thái giao dịch không phù hợp");
     }
-    timeshare.sell_timeshare_status = SellTimeshareStatus.SOLD;
-    const result = await timeshare.save();
-    if (!result) {
-      res.status(500);
-      throw new Error("Có lỗi xảy ra khi cập nhật lại trạng thái timeshare");
-    }
-    chosenTransaction.transaction_status = TransactionStatus.SELECTED;
-    res.status(200).json(chosenTransaction);
   } catch (error) {
     res
       .status(res.statusCode || 500)

@@ -45,6 +45,7 @@ const phaseRouter = require("./src/routes/PhaseRouter");
 const notificationRouter = require("./src/routes/NotificationRouter");
 const feedbackRouter = require("./src/routes/FeedbackRouter");
 const supportRouter = require("./src/routes/SupportRouter");
+const vnPayRouter = require("./src/routes/VNPayRouter");
 
 //static folder path
 app.use(express.static(path.resolve(__dirname, "public")));
@@ -60,6 +61,8 @@ app.use("/api/phases", phaseRouter);
 app.use("/api/notifications", notificationRouter);
 app.use("/api/feedbacks", feedbackRouter);
 app.use("/api/supports", supportRouter);
+app.use("/api/supports", supportRouter);
+app.use("/api/vnpays", vnPayRouter);
 
 // Global error handler
 app.use(errorHandler);

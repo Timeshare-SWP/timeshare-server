@@ -50,6 +50,9 @@ const userSchema = mongoose.Schema(
     otpExpires: {
       type: Date,
     },
+    profit: {
+      type: Number,
+    },
     ratings: [
       {
         type: Number,
