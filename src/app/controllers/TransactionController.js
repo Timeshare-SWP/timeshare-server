@@ -200,19 +200,24 @@ const buyTimeshare = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error("Không được bỏ trống các thành  phần bắt buộc");
     }
+    const timeshare = await Timeshare.findById(timeshare_id).populate(
+      "investor_id"
+    );
+    if (!timeshare) {
+      res.status(404);
+      throw new Error("Không tìm thấy timeshare");
+    }
+    if (timeshare.sell_timeshare_status !== SellTimeshareStatus.CAN_BE_SOLD) {
+      res.status(400);
+      throw new Error("Trạng thái timeshare không phù hợp để mua!");
+    }
     if (is_reserve) {
       const transaction = await Transaction.findById(transaction_id)
         .populate("timeshare_id")
         .exec();
       if (!transaction) {
         res.status(404);
-        throw new Error("Không tìm thấy đặt cọc");
-      }
-      if (transaction.transaction_status !== TransactionStatus.RESERVING) {
-        res.status(400);
-        throw new Error(
-          "Chỉ có timeshare đang giữ chổ có quyền mua theo cách này"
-        );
+        throw new Error("Không tìm thấy giao dịch giữ chổ");
       }
       if (!transaction.customers.includes(req.user.id)) {
         res.status(403);
@@ -220,13 +225,14 @@ const buyTimeshare = asyncHandler(async (req, res) => {
           "Chỉ có khách hàng đang tham gia timeshare có quyền xác nhận mua timeshare"
         );
       }
-      if (
-        transaction.timeshare_id.sell_timeshare_status !==
-        SellTimeshareStatus.CAN_BE_SOLD
-      ) {
+      if (transaction.transaction_status === TransactionStatus.WAITING) {
+        res.status(400);
+        throw new Error("Bạn đã mua timeshare này rồi");
+      }
+      if (transaction.transaction_status !== TransactionStatus.RESERVING) {
         res.status(400);
         throw new Error(
-          "Timeshare chưa được mở bán. Hãy đợi chủ đầu tư mở bán timeshare"
+          "Chỉ có timeshare đang giữ chổ có quyền mua theo cách này"
         );
       }
       transaction.transaction_status = TransactionStatus.WAITING;
@@ -237,10 +243,17 @@ const buyTimeshare = asyncHandler(async (req, res) => {
       }
       res.status(200).json(result);
     } else {
-      const timeshare = await Timeshare.findById(timeshare_id);
-      if (!timeshare) {
-        res.status(404);
-        throw new Error("Không tìm thấy timeshare");
+      const is_exist_transaction = await Transaction.find({
+        timeshare_id,
+        customers: req.user.id,
+      });
+      if (is_exist_transaction.length > 0) {
+        is_exist_transaction.forEach((transaction) => {
+          if (transaction.transaction_status === TransactionStatus.WAITING) {
+            res.status(400);
+            throw new Error("Bạn đã mua timeshare này rồi");
+          }
+        });
       }
       const transaction = new Transaction({
         timeshare_id,
@@ -547,6 +560,19 @@ const confirmSellTimeshare = asyncHandler(async (req, res) => {
     if (!updatedTransactions) {
       res.status(500);
       throw new Error("Có lỗi xảy ra khi chọn bán timeshare");
+    }
+    const timeshare = await Timeshare.findById(
+      chosenTransaction.timeshare_id._id
+    );
+    if (!timeshare) {
+      res.status(400);
+      throw new Error("Có lỗi xảy ra khi cập nhật lại trạng thái timeshare");
+    }
+    timeshare.sell_timeshare_status = SellTimeshareStatus.SOLD;
+    const result = await timeshare.save();
+    if (!result) {
+      res.status(500);
+      throw new Error("Có lỗi xảy ra khi cập nhật lại trạng thái timeshare");
     }
     chosenTransaction.transaction_status = TransactionStatus.SELECTED;
     res.status(200).json(chosenTransaction);

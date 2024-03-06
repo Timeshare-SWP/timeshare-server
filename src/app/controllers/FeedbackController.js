@@ -73,12 +73,8 @@ const getFeedbacksOfStaff = asyncHandler(async (req, res) => {
   }
 });
 
-const getFeedbacksForAdmin = asyncHandler(async (req, res) => {
+const getFeedbacks = asyncHandler(async (req, res) => {
   try {
-    if (req.user.roleName !== RoleEnum.ADMIN) {
-      res.status(403);
-      throw new Error("Chỉ có admin có quyền xem nhận xét của nhân viên");
-    }
     const { staff_id } = req.query;
     const feedbacks = await Feedback.find({ staff_id })
       .populate("customer_id")
@@ -180,7 +176,7 @@ const deleteFeedback = asyncHandler(async (req, res) => {
 
 module.exports = {
   createFeedback,
-  getFeedbacksForAdmin,
+  getFeedbacks,
   getFeedbacksOfStaff,
   updateFeedback,
   deleteFeedback,

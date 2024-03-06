@@ -8,6 +8,7 @@ const TimeshareImage = require("../models/TimeshareImage");
 const moment = require("moment");
 const SortTypeEnum = require("../../enum/SortTypeEnum");
 const SortByEnum = require("../../enum/SortByEnum");
+const TransactionStatus = require("../../enum/TransactionStatus");
 
 // @desc create new Timeshare
 // @route POST /timeshares
@@ -28,54 +29,58 @@ const createTimeshareImage = asyncHandler(async (req, res) => {
 // @route POST /timeshares
 // @access Private
 const createTimeshare = asyncHandler(async (req, res) => {
-  if (req.user.roleName !== RoleEnum.INVESTOR) {
-    res.status(403);
-    throw new Error("Chỉ có chủ đầu tư mới có quyền tạo timeshare");
-  }
-  const {
-    timeshare_name,
-    timeshare_address,
-    timeshare_description,
-    price,
-    timeshare_type,
-    timeshare_image,
-    land_area,
-  } = req.body;
-  if (
-    !timeshare_name ||
-    !timeshare_address ||
-    !timeshare_description ||
-    !price ||
-    !timeshare_type ||
-    !timeshare_image ||
-    !land_area
-  ) {
-    res.status(400);
-    throw new Error("Không được để trống các thuộc tính bắt buộc");
-  }
-  const timeshare = new Timeshare(req.body);
-  if (!timeshare) {
-    res.status(400);
-    throw new Error("Có lỗi xảy ra khi tạo timeshare mới");
-  }
-  timeshare.sell_timeshare_status = SellTimeshareStatus.NOT_YET_SOLD;
-  timeshare.investor_id = req.user.id.toString();
-  const year_of_commencement = Number.parseInt(req.body.year_of_commencement);
-  const year_of_handover = Number.parseInt(req.body.year_of_handover);
-  const current_year = new Date().getFullYear();
-  if (year_of_commencement < current_year) {
-    res.status(400);
-    throw new Error("Năm khởi công phải lớn hơn hoặc bằng năm hiện tại");
-  }
-  if (year_of_commencement > year_of_handover) {
-    res.status(400);
-    throw new Error("Năm bàn giao phải lớn hơn hoặc bằng năm khởi công");
-  }
   try {
+    if (req.user.roleName !== RoleEnum.INVESTOR) {
+      res.status(403);
+      throw new Error("Chỉ có chủ đầu tư mới có quyền tạo timeshare");
+    }
+    const {
+      timeshare_name,
+      timeshare_address,
+      timeshare_description,
+      price,
+      timeshare_type,
+      timeshare_image,
+      land_area,
+      deposit_price,
+    } = req.body;
+    if (
+      !timeshare_name ||
+      !timeshare_address ||
+      !timeshare_description ||
+      !price ||
+      !timeshare_type ||
+      !timeshare_image ||
+      !land_area ||
+      !deposit_price
+    ) {
+      res.status(400);
+      throw new Error("Không được để trống các thuộc tính bắt buộc");
+    }
+    const timeshare = new Timeshare(req.body);
+    if (!timeshare) {
+      res.status(400);
+      throw new Error("Có lỗi xảy ra khi tạo timeshare mới");
+    }
+    timeshare.sell_timeshare_status = SellTimeshareStatus.NOT_YET_SOLD;
+    timeshare.investor_id = req.user.id.toString();
+    const year_of_commencement = Number.parseInt(req.body.year_of_commencement);
+    const year_of_handover = Number.parseInt(req.body.year_of_handover);
+    const current_year = new Date().getFullYear();
+    if (year_of_commencement < current_year) {
+      res.status(400);
+      throw new Error("Năm khởi công phải lớn hơn hoặc bằng năm hiện tại");
+    }
+    if (year_of_commencement > year_of_handover) {
+      res.status(400);
+      throw new Error("Năm bàn giao phải lớn hơn hoặc bằng năm khởi công");
+    }
     const newTimeshare = await timeshare.save();
     res.status(201).json(newTimeshare);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
   }
 });
 

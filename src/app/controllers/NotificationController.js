@@ -56,8 +56,12 @@ const markAllNotificationsAsRead = asyncHandler(async (req, res) => {
         "Có lỗi xảy ra khi truy xuất tất cả thông báo của người dùng"
       );
     }
-    notifications.forEach((notification) => (notification.is_read = true));
-    await notifications.save();
+    notifications.forEach(async (notification) => {
+      if (!notification.is_read) {
+        notification.is_read = true;
+        await notification.save();
+      }
+    });
     res.status(200).json(notifications);
   } catch (error) {
     res

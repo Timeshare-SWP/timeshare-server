@@ -26,6 +26,10 @@ const timeshareSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
+    deposit_price: {
+      type: Number,
+      required: true,
+    },
     ownership: {
       type: String,
     },

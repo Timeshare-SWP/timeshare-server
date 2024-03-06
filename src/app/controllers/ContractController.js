@@ -200,9 +200,59 @@ const confirmContract = asyncHandler(async (req, res) => {
   }
 });
 
+const getContractByTransactionId = asyncHandler(async (req, res) => {
+  try {
+    const { transaction_id } = req.params;
+    const transaction = await Transaction.findById(transaction_id);
+    if (!transaction) {
+      res.status(404);
+      throw new Error("Không tìm thấy giao dịch");
+    }
+    const contract = await Contract.findOne({
+      transaction_id: transaction._id,
+    })
+      .populate("transaction_id")
+      .populate("contract_image");
+    if (!contract) {
+      res.status(404);
+      throw new Error("Không tìm thấy hợp đồng");
+    }
+    res.status(200).json(contract);
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
+const getAllContractStatusByContractId = asyncHandler(async (req, res) => {
+  try {
+    const { contract_id } = req.params;
+    const contract = await Contract.findById(contract_id);
+    if (!contract) {
+      res.status(404);
+      throw new Error("Không tìm thấy hợp đồng");
+    }
+    const contractStatuses = await ContractStatus.find({
+      contract_id,
+    }).populate("customer_id");
+    if (!contractStatuses) {
+      res.status(500);
+      throw new Error("Có lỗi xảy ra khi truy xuất tất cả trạng thái hợp đồng");
+    }
+    res.status(200).json(contractStatuses);
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
 module.exports = {
   createContractImage,
   createContract,
+  getContractByTransactionId,
   updateContract,
   confirmContract,
+  getAllContractStatusByContractId,
 };

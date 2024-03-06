@@ -5,6 +5,8 @@ const {
   createContract,
   updateContract,
   confirmContract,
+  getAllContractStatusByContractId,
+  getContractByTransactionId,
 } = require("../app/controllers/ContractController");
 
 const { validateToken } = require("../app/middleware/validateTokenHandler");
@@ -16,5 +18,11 @@ contractRouter.route("/").post(createContract).put(updateContract);
 contractRouter.route("/contractImage").post(createContractImage);
 
 contractRouter.route("/confirmContract").patch(confirmContract);
+
+contractRouter
+  .route("/contractStatus/:contract_id")
+  .get(getAllContractStatusByContractId);
+
+contractRouter.route("/:transaction_id").get(getContractByTransactionId);
 
 module.exports = contractRouter;

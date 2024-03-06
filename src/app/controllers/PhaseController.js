@@ -290,7 +290,99 @@ const updatePhase = asyncHandler(async (req, res) => {
   }
 });
 
+const getPhasesByContractId = asyncHandler(async (req, res) => {
+  try {
+    const { contract_id } = req.params;
+    const contract = await Contract.findById(contract_id);
+    if (!contract) {
+      res.status(404);
+      throw new Error("Không tìm thấy hợp đồng");
+    }
+    const phases = await Phase.find({
+      contract_id: contract._id,
+    }).populate("contract_id");
+    if (!phases) {
+      res.status(500);
+      throw new Error(
+        "Có lỗi xảy ra khi truy xuất tất cả giai đoạn thanh toán"
+      );
+    }
+    res.status(200).json(phases);
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
+const deletePhase = asyncHandler(async (req, res) => {
+  try {
+    if (req.user.roleName !== RoleEnum.INVESTOR) {
+      res.status(403);
+      throw new Error(
+        "Chỉ có chủ đầu tư có quyền chỉnh sửa thông tin giai đoạn thanh toán"
+      );
+    }
+    const { phase_id } = req.params;
+    const phase = await Phase.findById(phase_id).populate("contract_id");
+    if (!phase) {
+      res.status(404);
+      throw new Error("Không tìm thấy giai đoạn thanh toán");
+    }
+    const contract = await Contract.findById(phase.contract_id._id).populate({
+      path: "transaction_id",
+      populate: {
+        path: "timeshare_id",
+      },
+    });
+    if (
+      contract.transaction_id.timeshare_id.investor_id.toString() !==
+      req.user.id.toString()
+    ) {
+      res.status(403);
+      throw new Error(
+        "Chỉ có chủ đầu tư sở hữu timeshare có quyền xóa giai đoạn thanh toán"
+      );
+    }
+    if (contract.is_all_confirm) {
+      res.status(400);
+      throw new Error(
+        "Không thế xóa giai đoạn thanh toán. Hợp đồng đã được xác nhận bởi khách hàng"
+      );
+    }
+    const phases = await Phase.find({ contract_id: contract._id });
+    if (phases.length === 1 && phase.phase_no === 1) {
+      const result = await phase.remove();
+      if (!result) {
+        result.status(500);
+        throw new Error("Có lỗi xảy ra khi xóa giai đoạn thanh toán");
+      }
+      res.status(200).send("Xóa giai đoạn thanh toán thành công");
+    } else {
+      phases.forEach(async (item) => {
+        if (phase.phase_no === item.phase_no) {
+          const result = await phase.remove();
+          if (!result) {
+            result.status(500);
+            throw new Error("Có lỗi xảy ra khi xóa giai đoạn thanh toán");
+          }
+        } else if (item.phase_no > phase.phase_no) {
+          item.phase_no -= 1;
+          await item.save();
+        }
+      });
+      res.status(200).send("Xóa giai đoạn thanh toán thành công");
+    }
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
 module.exports = {
   createPhase,
+  getPhasesByContractId,
   updatePhase,
+  deletePhase,
 };
