@@ -12,6 +12,7 @@ const {
   getAllCustomerWhoReservePlace,
   cancelReservePlace,
   sortReservePlace,
+  checkReservingTimeshare,
 } = require("../app/controllers/ReservePlaceController");
 
 reservePlaceRouter.use(validateToken);
@@ -23,6 +24,10 @@ reservePlaceRouter.route("/search").get(searchReservePlaceByTimeshareName);
 reservePlaceRouter.route("/filter").post(filterReservePlaceByTimeshare);
 
 reservePlaceRouter.route("/cancel").delete(cancelReservePlace);
+
+reservePlaceRouter
+  .route("/checkReservingTimeshare")
+  .get(checkReservingTimeshare);
 
 reservePlaceRouter
   .route("/sortReservePlace")

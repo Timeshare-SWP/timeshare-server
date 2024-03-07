@@ -148,7 +148,7 @@ const VNPayReturn = asyncHandler(async (req, res) => {
     let hmac = crypto.createHmac("sha512", secretKey);
     let signed = hmac.update(new Buffer(signData, "utf-8")).digest("hex");
 
-    if (secureHash === signed) {
+    if (secureHash === signed && vnp_Params["vnp_ResponseCode"] === "00") {
       const vnp_OrderInfo = vnp_Params["vnp_OrderInfo"];
       const orderInfo = vnp_OrderInfo.split("+")[0];
       const orderType = vnp_OrderInfo.split("+")[1];
@@ -215,9 +215,13 @@ const VNPayReturn = asyncHandler(async (req, res) => {
         await notification.save();
       }
 
-      res.status(200).send("Thanh toán thành công");
+      res.render("success_vnpay", {
+        vnp_TransactionNo: vnp_Params["vnp_TransactionNo"],
+      });
     } else {
-      res.status(400).send("Thanh toán thất bại");
+      res.render("error_vnpay", {
+        vnp_TransactionNo: vnp_Params["vnp_TransactionNo"],
+      });
     }
   } catch (error) {
     res

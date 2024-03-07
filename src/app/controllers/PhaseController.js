@@ -52,6 +52,9 @@ const createPhase = asyncHandler(async (req, res) => {
         throw new Error("Ngày hết hạn chuyển tiền phải sau ngày hiện tại");
       }
       const phase = new Phase(req.body);
+      phase.phase_price =
+        (req.body.phase_price_percent / 100) *
+        contract.transaction_id.timeshare_id.price;
       phase.phase_no = 1;
       phase.is_payment = false;
       const result = await phase.save();
@@ -92,6 +95,9 @@ const createPhase = asyncHandler(async (req, res) => {
         );
       }
       const phase = new Phase(req.body);
+      phase.phase_price =
+        (req.body.phase_price_percent / 100) *
+        contract.transaction_id.timeshare_id.price;
       phase.phase_no = total_phase + 1;
       phase.remittance_deadline = remittance_deadline_date;
       phase.is_payment = false;

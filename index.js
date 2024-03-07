@@ -11,6 +11,8 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 
+app.set("view engine", "ejs");
+
 app.use(function (req, res, next) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(

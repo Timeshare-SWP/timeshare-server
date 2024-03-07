@@ -15,6 +15,10 @@ const phaseSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
+    phase_price_percent: {
+      type: Number,
+      required: true,
+    },
     is_payment: {
       type: Boolean,
       default: false,

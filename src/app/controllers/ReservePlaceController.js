@@ -472,6 +472,31 @@ const sortReservePlace = asyncHandler(async (req, res) => {
   }
 });
 
+const checkReservingTimeshare = asyncHandler(async (req, res) => {
+  try {
+    const { timeshare_id } = req.query;
+    const transactions = await Transaction.find({
+      timeshare_id,
+      customers: req.user.id,
+    });
+    if (!transactions || transactions.length === 0) {
+      res.status(200).send(false);
+      return;
+    }
+    transactions.forEach((transaction) => {
+      if (transaction.transaction_status === TransactionStatus.RESERVING) {
+        res.status(200).send(true);
+        return;
+      }
+    });
+    res.status(200).send(false);
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
 module.exports = {
   createReservePlace,
   searchReservePlaceByTimeshareName,
@@ -480,4 +505,5 @@ module.exports = {
   getAllCustomerWhoReservePlace,
   cancelReservePlace,
   sortReservePlace,
+  checkReservingTimeshare,
 };
