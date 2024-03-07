@@ -22,10 +22,12 @@ const {
   banAccountByAdmin,
   sortAccount,
   filterAccount,
+  statisticProfitByMonth,
 } = require("../app/controllers/UserController");
 const {
   validateToken,
   validateTokenAdmin,
+  validateTokenInvestor,
 } = require("../app/middleware/validateTokenHandler");
 
 userRouter.route("/register").post(registerUser);
@@ -66,6 +68,10 @@ userRouter.route("/filterAccount").get(validateTokenAdmin, filterAccount);
 userRouter
   .route("/statisticsAccount")
   .get(validateTokenAdmin, statisticsAccountByStatus);
+
+userRouter
+  .route("/statisticProfitByMonth")
+  .get(validateTokenInvestor, statisticProfitByMonth);
 
 userRouter
   .route("/searchAccountByEmail")

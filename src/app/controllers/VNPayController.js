@@ -157,6 +157,7 @@ const VNPayReturn = asyncHandler(async (req, res) => {
           "timeshare_id"
         );
         transaction.is_reservation_paid = true;
+        transaction.reservation_pay_date = Date.now();
         await transaction.save();
 
         // Update profit for investor
@@ -190,6 +191,7 @@ const VNPayReturn = asyncHandler(async (req, res) => {
           },
         });
         phase.is_payment = true;
+        phase.pay_date = Date.now();
         await phase.save();
 
         // Update profit for investor

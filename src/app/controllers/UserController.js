@@ -10,6 +10,8 @@ const FilterByEnum = require("../../enum/FilterByEnum");
 const FilterTypeEnum = require("../../enum/FilterTypeEnum");
 const SortByEnum = require("../../enum/SortByEnum");
 const SortTypeEnum = require("../../enum/SortTypeEnum");
+const Phase = require("../models/Phase");
+const Transaction = require("../models/Transaction");
 
 //@desc Register New user
 //@route POST /api/users/register
@@ -1208,6 +1210,49 @@ const sortAccount = asyncHandler(async (req, res) => {
   }
 });
 
+const statisticProfitByMonth = asyncHandler(async (req, res) => {
+  try {
+    const phases = await Phase.find().populate({
+      path: "contract_id",
+      populate: {
+        path: "transaction_id",
+        populate: { path: "timeshare_id" },
+      },
+    });
+    const transactions = await Transaction.find().populate("timeshare_id");
+    let result = new Array(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+    if (transactions.length > 0) {
+      transactions.forEach((transaction) => {
+        if (
+          transaction.timeshare_id.investor_id.toString() ===
+            req.user.id.toString() &&
+          transaction.reservation_pay_date !== undefined
+        ) {
+          const month = transaction.reservation_pay_date.getMonth();
+          result[month] += transaction.reservation_price;
+        }
+      });
+    }
+    if (phases.length > 0) {
+      phases.forEach((phase) => {
+        if (
+          phase.contract_id.transaction_id.timeshare_id.investor_id.toString() ===
+            req.user.id.toString() &&
+          phase.pay_date !== undefined
+        ) {
+          const month = phase.pay_date.getMonth();
+          result[month] += phase.phase_price;
+        }
+      });
+    }
+    res.status(200).send(result);
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
 module.exports = {
   registerUser,
   registerStaff,
@@ -1229,4 +1274,5 @@ module.exports = {
   banAccountByAdmin,
   sortAccount,
   filterAccount,
+  statisticProfitByMonth,
 };

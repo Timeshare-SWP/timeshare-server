@@ -544,6 +544,39 @@ const statisticsTimeshareBySellTimeshareStatus = asyncHandler(
     }
   }
 );
+const statisticsTimeshareBySellStatusForInvestor = asyncHandler(
+  async (req, res) => {
+    try {
+      const timeshares = await Timeshare.find();
+      if (!timeshares || timeshares.length === 0) {
+        return null;
+      }
+      const tmpCountData = {
+        "Chưa được bán": 0,
+        "Đang mở bán": 0,
+        "Đã bán": 0,
+      };
+
+      timeshares.forEach((timeshare) => {
+        if (timeshare.investor_id.toString() === req.user.id.toString()) {
+          const sell_timeshare_status = timeshare.sell_timeshare_status;
+          tmpCountData[sell_timeshare_status] =
+            tmpCountData[sell_timeshare_status] + 1;
+        }
+      });
+
+      const result = Object.keys(tmpCountData).map((key) => ({
+        key,
+        value: tmpCountData[key],
+      }));
+      res.status(200).json(result);
+    } catch (error) {
+      res
+        .status(error.statusCode || 500)
+        .send(error.message || "Internal Server Error");
+    }
+  }
+);
 
 const statisticTimeshareByMonth = asyncHandler(async (req, res) => {
   try {
@@ -777,6 +810,7 @@ module.exports = {
   createTimeshareImage,
   statisticsTimeshareByStatus,
   statisticsTimeshareBySellTimeshareStatus,
+  statisticsTimeshareBySellStatusForInvestor,
   statisticTimeshareByMonth,
   sortTimeshare,
 };

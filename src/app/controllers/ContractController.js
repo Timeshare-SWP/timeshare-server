@@ -248,6 +248,28 @@ const getAllContractStatusByContractId = asyncHandler(async (req, res) => {
   }
 });
 
+const checkTimeshareHaveContract = asyncHandler(async (req, res) => {
+  try {
+    const { timeshare_id } = req.query;
+    const contracts = await Contract.find().populate("transaction_id");
+    if (!contracts || contracts.length === 0) {
+      res.status(200).send(false);
+      return;
+    }
+    contracts.forEach((contract) => {
+      if (contract.transaction_id.timeshare_id === timeshare_id) {
+        res.status(200).send(true);
+        return;
+      }
+    });
+    res.status(200).send(false);
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
 module.exports = {
   createContractImage,
   createContract,
@@ -255,4 +277,5 @@ module.exports = {
   updateContract,
   confirmContract,
   getAllContractStatusByContractId,
+  checkTimeshareHaveContract,
 };

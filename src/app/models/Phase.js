@@ -19,6 +19,9 @@ const phaseSchema = mongoose.Schema(
       type: Number,
       required: true,
     },
+    pay_date: {
+      type: Date,
+    },
     is_payment: {
       type: Boolean,
       default: false,
