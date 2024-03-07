@@ -20,7 +20,7 @@ const contractSchema = mongoose.Schema(
       },
     ],
     contract_related_link: {
-      type: String,
+      type: [String],
       required: true,
     },
   },
