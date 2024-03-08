@@ -8,6 +8,7 @@ const {
   getAllContractStatusByContractId,
   getContractByTransactionId,
   checkTimeshareHaveContract,
+  checkAllTransactionHaveContract,
 } = require("../app/controllers/ContractController");
 
 const { validateToken } = require("../app/middleware/validateTokenHandler");
@@ -23,6 +24,10 @@ contractRouter.route("/confirmContract").patch(confirmContract);
 contractRouter
   .route("/checkTimeshareHaveContract")
   .get(checkTimeshareHaveContract);
+
+contractRouter
+  .route("/checkAllTransactionHaveContract")
+  .get(checkAllTransactionHaveContract);
 
 contractRouter
   .route("/contractStatus/:contract_id")

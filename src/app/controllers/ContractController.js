@@ -257,12 +257,38 @@ const checkTimeshareHaveContract = asyncHandler(async (req, res) => {
       return;
     }
     contracts.forEach((contract) => {
-      if (contract.transaction_id.timeshare_id === timeshare_id) {
+      if (contract.transaction_id.timeshare_id.toString() === timeshare_id) {
         res.status(200).send(true);
         return;
       }
     });
     res.status(200).send(false);
+  } catch (error) {
+    res
+      .status(res.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
+const checkAllTransactionHaveContract = asyncHandler(async (req, res) => {
+  try {
+    const transactions = await Transaction.find();
+    if (!transactions || transactions.length === 0) {
+      res.status(200).send([]);
+    }
+    const transactionsWithContracts = await Promise.all(
+      transactions.map(async (transaction) => {
+        const contractExists = await Contract.exists({
+          transaction_id: transaction._id,
+        });
+        const transactionWithContract = {
+          ...transaction.toObject(),
+          is_contract: contractExists ? true : false,
+        };
+        return transactionWithContract;
+      })
+    );
+    res.status(200).json(transactionsWithContracts);
   } catch (error) {
     res
       .status(res.statusCode || 500)
@@ -278,4 +304,5 @@ module.exports = {
   confirmContract,
   getAllContractStatusByContractId,
   checkTimeshareHaveContract,
+  checkAllTransactionHaveContract,
 };
