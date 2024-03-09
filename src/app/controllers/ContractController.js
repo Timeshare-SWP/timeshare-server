@@ -283,7 +283,7 @@ const checkAllTransactionHaveContract = asyncHandler(async (req, res) => {
         });
         const transactionWithContract = {
           ...transaction.toObject(),
-          is_contract: contractExists ? true : false,
+          is_contract: !!contractExists,
         };
         return transactionWithContract;
       })

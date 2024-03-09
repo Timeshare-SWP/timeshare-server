@@ -9,6 +9,24 @@ const errorHandler = require("./src/app/middleware/errorHandler");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Socket Config
+const httpServer = require("http").createServer(app);
+const io = require("socket.io")(httpServer, {
+  cors: {
+    origin: "*",
+  },
+});
+
+// Socket.io event handlers
+io.on("connection", (socket) => {
+  console.log("New client connected");
+
+  socket.on("disconnect", () => {
+    console.log("Client disconnected");
+  });
+});
+global._io = io;
+
 app.use(cors());
 
 app.set("view engine", "ejs");
@@ -48,6 +66,7 @@ const notificationRouter = require("./src/routes/NotificationRouter");
 const feedbackRouter = require("./src/routes/FeedbackRouter");
 const supportRouter = require("./src/routes/SupportRouter");
 const vnPayRouter = require("./src/routes/VNPayRouter");
+const chatRouter = require("./src/routes/ChatRouter");
 
 //static folder path
 app.use(express.static(path.resolve(__dirname, "public")));
@@ -65,10 +84,11 @@ app.use("/api/feedbacks", feedbackRouter);
 app.use("/api/supports", supportRouter);
 app.use("/api/supports", supportRouter);
 app.use("/api/vnpays", vnPayRouter);
+app.use("/api/chats", chatRouter);
 
 // Global error handler
 app.use(errorHandler);
 
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`Server is running on port: http://localhost:${PORT}`);
 });

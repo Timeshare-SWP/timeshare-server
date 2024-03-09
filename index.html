@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Socket.IO Client Test</title>
+  </head>
+  <body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
+    <script>
+      const socket = io("http://localhost:5000"); // Replace with your actual server URL
+
+      socket.on("connect", () => {
+        console.log("Connected to server");
+
+        // Emit a 'reply-invite' message to the server
+        socket.emit("reply-invite", {
+          /* Your data object */
+        });
+      });
+
+      // Listen for 'reply-invite' messages from the server
+      socket.on("userChats", (data) => {
+        console.log("Received reply-invite from server:", data);
+      });
+
+      // Listen for 'reply-invite' messages from the server
+      socket.on("messages", (data) => {
+        console.log("Received reply-invite from server:", data);
+      });
+
+      socket.on("disconnect", () => {
+        console.log("Disconnected from server");
+      });
+    </script>
+  </body>
+</html>
