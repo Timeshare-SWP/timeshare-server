@@ -39,23 +39,35 @@ const createTimeshare = asyncHandler(async (req, res) => {
       timeshare_address,
       timeshare_description,
       price,
+      max_price,
       timeshare_type,
       timeshare_image,
       land_area,
       deposit_price,
+      sell_number,
+      year_of_commencement,
+      year_of_handover,
     } = req.body;
     if (
       !timeshare_name ||
       !timeshare_address ||
       !timeshare_description ||
       !price ||
+      !max_price ||
       !timeshare_type ||
       !timeshare_image ||
       !land_area ||
-      !deposit_price
+      !deposit_price ||
+      !sell_number ||
+      !year_of_commencement ||
+      !year_of_handover
     ) {
       res.status(400);
       throw new Error("Không được để trống các thuộc tính bắt buộc");
+    }
+    if (max_price < price) {
+      res.status(400);
+      throw new Error("Giá bán tối đa phải lớn hơn giá bán tối thiểu");
     }
     const timeshare = new Timeshare(req.body);
     if (!timeshare) {
@@ -64,14 +76,14 @@ const createTimeshare = asyncHandler(async (req, res) => {
     }
     timeshare.sell_timeshare_status = SellTimeshareStatus.NOT_YET_SOLD;
     timeshare.investor_id = req.user.id.toString();
-    const year_of_commencement = Number.parseInt(req.body.year_of_commencement);
-    const year_of_handover = Number.parseInt(req.body.year_of_handover);
+    const year_commencement = Number.parseInt(year_of_commencement);
+    const year_handover = Number.parseInt(year_of_handover);
     const current_year = new Date().getFullYear();
-    if (year_of_commencement < current_year) {
+    if (year_commencement < current_year) {
       res.status(400);
       throw new Error("Năm khởi công phải lớn hơn hoặc bằng năm hiện tại");
     }
-    if (year_of_commencement > year_of_handover) {
+    if (year_commencement > year_handover) {
       res.status(400);
       throw new Error("Năm bàn giao phải lớn hơn hoặc bằng năm khởi công");
     }
@@ -167,6 +179,37 @@ const updateTimeshare = asyncHandler(async (req, res) => {
         "Chỉ có chủ đầu tư có quyền thay đổi thông tin timeshare"
       );
     }
+    const {
+      timeshare_name,
+      timeshare_address,
+      timeshare_description,
+      price,
+      max_price,
+      timeshare_type,
+      timeshare_image,
+      land_area,
+      deposit_price,
+      sell_number,
+      year_of_commencement,
+      year_of_handover,
+    } = req.body;
+    if (
+      !timeshare_name ||
+      !timeshare_address ||
+      !timeshare_description ||
+      !price ||
+      !max_price ||
+      !timeshare_type ||
+      !timeshare_image ||
+      !land_area ||
+      !deposit_price ||
+      !sell_number ||
+      !year_of_commencement ||
+      !year_of_handover
+    ) {
+      res.status(400);
+      throw new Error("Không được để trống các thuộc tính bắt buộc");
+    }
     const timeshare_id = req.params.timeshare_id;
     const timeshare = await Timeshare.findById(timeshare_id);
     if (!timeshare) {
@@ -179,7 +222,10 @@ const updateTimeshare = asyncHandler(async (req, res) => {
         "Chủ đầu tư không thể sửa đổi thông tin timeshare của người khác"
       );
     }
-    const { year_of_commencement, year_of_handover } = req.body;
+    if (max_price < price) {
+      res.status(400);
+      throw new Error("Giá bán tối đa phải lớn hơn giá bán tối thiểu");
+    }
     const year_commencement = Number.parseInt(year_of_commencement);
     const year_handover = Number.parseInt(year_of_handover);
     const current_year = new Date().getFullYear();
@@ -467,6 +513,9 @@ const filterTimeshare = asyncHandler(async (req, res) => {
             if (startYear && endYear) {
               query[key] = { $gte: startYear, $lte: endYear };
             }
+          } else if (key === "price") {
+            query[key] = { $lte: value };
+            query["max_price"] = { $gte: value };
           } else {
             query[key] = value;
           }
@@ -667,41 +716,6 @@ const sortTimeshare = asyncHandler(async (req, res) => {
                 res.status(500);
                 throw new Error(
                   "Có lỗi xảy ra khi truy xuất tất cả timeshare theo tên timeshare"
-                );
-              }
-              res.status(200).json(timeshares);
-            });
-        } else {
-          res.status(400);
-          throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
-        }
-        break;
-      }
-      case SortByEnum.PRICE: {
-        if (sortType === SortTypeEnum.ASC) {
-          await Timeshare.find()
-            .sort({ price: 1 })
-            .populate("investor_id")
-            .populate("timeshare_image")
-            .exec((err, timeshares) => {
-              if (err) {
-                res.status(500);
-                throw new Error(
-                  "Có lỗi xảy ra khi truy xuất tất cả timeshare theo giá timesshare"
-                );
-              }
-              res.status(200).json(timeshares);
-            });
-        } else if (sortType === SortTypeEnum.DESC) {
-          await Timeshare.find()
-            .sort({ price: -1 })
-            .populate("investor_id")
-            .populate("timeshare_image")
-            .exec((err, timeshares) => {
-              if (err) {
-                res.status(500);
-                throw new Error(
-                  "Có lỗi xảy ra khi truy xuất tất cả timeshare theo giá timesshare"
                 );
               }
               res.status(200).json(timeshares);

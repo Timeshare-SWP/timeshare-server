@@ -7,6 +7,9 @@ const contractSchema = mongoose.Schema(
       ref: "Transaction",
       required: true,
     },
+    final_price: {
+      type: Number,
+    },
     is_all_confirm: {
       type: Boolean,
       default: false,

@@ -34,8 +34,18 @@ const createContract = asyncHandler(async (req, res) => {
       res.status(403);
       throw new Error("Chỉ có chủ đầu tư có quyền tạo hợp đồng");
     }
-    const { transaction_id, contract_image, contract_related_link } = req.body;
-    if (!transaction_id || !contract_image || !contract_related_link) {
+    const {
+      transaction_id,
+      contract_image,
+      contract_related_link,
+      final_price,
+    } = req.body;
+    if (
+      !transaction_id ||
+      !contract_image ||
+      !contract_related_link ||
+      !final_price
+    ) {
       res.status(400);
       throw new Error("Không được bỏ trống những thông tin bắt buôc");
     }
@@ -91,8 +101,14 @@ const updateContract = asyncHandler(async (req, res) => {
       res.status(403);
       throw new Error("Chỉ có chủ đầu tư có quyền chỉnh sửa hợp đồng");
     }
-    const { contract_id, contract_image, contract_related_link } = req.body;
-    if (!contract_id || !contract_image || !contract_related_link) {
+    const { contract_id, contract_image, contract_related_link, final_price } =
+      req.body;
+    if (
+      !contract_id ||
+      !contract_image ||
+      !contract_related_link ||
+      !final_price
+    ) {
       res.status(400);
       throw new Error("Không được bỏ trống những thông tin bắt buôc");
     }
@@ -117,6 +133,7 @@ const updateContract = asyncHandler(async (req, res) => {
     }
     contract.contract_image = contract_image;
     contract.contract_related_link = contract_related_link;
+    contract.final_price = final_price;
     const result = await contract.save();
     if (!result) {
       res.status(500);

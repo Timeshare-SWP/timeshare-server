@@ -539,44 +539,55 @@ const confirmSellTimeshare = asyncHandler(async (req, res) => {
       throw new Error("Trạng thái giao dịch không phù hợp để chọn bán");
     }
     if (transaction_status === TransactionStatus.SELECTED) {
-      const updatedTransactions = await Transaction.updateMany(
-        {
-          timeshare_id: chosenTransaction.timeshare_id,
-          transaction_status: TransactionStatus.WAITING,
-        },
-        [
+      chosenTransaction.transaction_status = transaction_status;
+      const updateTransaction = await chosenTransaction.save();
+      if (!updateTransaction) {
+        res.status(500);
+        throw new Error("Có lỗi xảy ra khi xác nhận bán timeshare");
+      }
+      const checkSellNumber = await Transaction.find({
+        transaction_status: TransactionStatus.SELECTED,
+        timeshare_id: chosenTransaction.timeshare_id,
+      });
+      if (
+        checkSellNumber.length === chosenTransaction.timeshare_id.sell_number
+      ) {
+        const rejectOtherTransactions = await Transaction.updateMany(
           {
-            $set: {
-              transaction_status: {
-                $cond: {
-                  if: { $eq: ["$_id", chosenTransaction._id] },
-                  then: TransactionStatus.SELECTED,
-                  else: TransactionStatus.REJECTED,
-                },
+            timeshare_id: chosenTransaction.timeshare_id,
+            transaction_status: TransactionStatus.WAITING,
+          },
+          [
+            {
+              $set: {
+                transaction_status: TransactionStatus.REJECTED,
               },
             },
-          },
-        ]
-      );
-      if (!updatedTransactions) {
-        res.status(500);
-        throw new Error("Có lỗi xảy ra khi chọn bán timeshare");
+          ]
+        );
+        if (!rejectOtherTransactions) {
+          res.status(500);
+          throw new Error("Có lỗi xảy ra khi từ chối tất cả giao dịch còn lại");
+        }
+        const timeshare = await Timeshare.findById(
+          chosenTransaction.timeshare_id._id
+        );
+        if (!timeshare) {
+          res.status(400);
+          throw new Error(
+            "Có lỗi xảy ra khi cập nhật lại trạng thái timeshare"
+          );
+        }
+        timeshare.sell_timeshare_status = SellTimeshareStatus.SOLD;
+        const result = await timeshare.save();
+        if (!result) {
+          res.status(500);
+          throw new Error(
+            "Có lỗi xảy ra khi cập nhật lại trạng thái timeshare"
+          );
+        }
       }
-      const timeshare = await Timeshare.findById(
-        chosenTransaction.timeshare_id._id
-      );
-      if (!timeshare) {
-        res.status(400);
-        throw new Error("Có lỗi xảy ra khi cập nhật lại trạng thái timeshare");
-      }
-      timeshare.sell_timeshare_status = SellTimeshareStatus.SOLD;
-      const result = await timeshare.save();
-      if (!result) {
-        res.status(500);
-        throw new Error("Có lỗi xảy ra khi cập nhật lại trạng thái timeshare");
-      }
-      chosenTransaction.transaction_status = TransactionStatus.SELECTED;
-      res.status(200).json(chosenTransaction);
+      res.status(200).json(updateTransaction);
     } else if (transaction_status === TransactionStatus.REJECTED) {
       chosenTransaction.transaction_status = transaction_status;
       const updatedTransactions = await chosenTransaction.save();
@@ -628,96 +639,48 @@ const statisticsTransactionByStatus = asyncHandler(async (req, res) => {
 });
 
 const sortTransaction = asyncHandler(async (req, res) => {
-  const { sortBy, sortType } = req.query;
+  const { sortType } = req.query;
   try {
     const transaction_status = [
       TransactionStatus.WAITING,
       TransactionStatus.SELECTED,
       TransactionStatus.REJECTED,
     ];
-    switch (sortBy) {
-      case SortByEnum.CREATED_AT: {
-        if (sortType === SortTypeEnum.ASC) {
-          await Transaction.find({
-            transaction_status: { $in: transaction_status },
-          })
-            .sort({ createdAt: 1 })
-            .populate("timeshare_id")
-            .populate("customers")
-            .exec((err, reservePlaces) => {
-              if (err) {
-                res.status(500);
-                throw new Error(
-                  "Có lỗi xảy ra khi truy xuất tất cả giao dịch theo ngày tạo"
-                );
-              }
-              res.status(200).json(reservePlaces);
-            });
-        } else if (sortType === SortTypeEnum.DESC) {
-          await Transaction.find({
-            transaction_status: { $in: transaction_status },
-          })
-            .sort({ createdAt: -1 })
-            .populate("timeshare_id")
-            .populate("customers")
-            .exec((err, reservePlaces) => {
-              if (err) {
-                res.status(500);
-                throw new Error(
-                  "Có lỗi xảy ra khi truy xuất tất cả giao dịch theo ngày tạo"
-                );
-              }
-              res.status(200).json(reservePlaces);
-            });
-        } else {
-          res.status(400);
-          throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
-        }
-        break;
-      }
-      case SortByEnum.TOTAL_MONEY: {
-        if (sortType === SortTypeEnum.ASC) {
-          let transactions = await Transaction.find({
-            transaction_status: { $in: transaction_status },
-          })
-            .populate("timeshare_id")
-            .populate("customers");
-          transactions.forEach((transaction) => {
-            if (!transaction.reservation_price) {
-              transaction.total_money = transaction.timeshare_id.price;
-            } else {
-              transaction.total_money =
-                transaction.timeshare_id.price + transaction.reservation_price;
-            }
-          });
-          transactions.sort((a, b) => a.total_money - b.total_money);
-          res.status(200).json(transactions);
-        } else if (sortType === SortTypeEnum.DESC) {
-          let transactions = await Transaction.find({
-            transaction_status: { $in: transaction_status },
-          })
-            .populate("timeshare_id")
-            .populate("customers");
-          transactions.forEach((transaction) => {
-            if (!transaction.reservation_price) {
-              transaction.total_money = transaction.timeshare_id.price;
-            } else {
-              transaction.total_money =
-                transaction.timeshare_id.price + transaction.reservation_price;
-            }
-          });
-          transactions.sort((a, b) => b.total_money - a.total_money);
-          res.status(200).json(transactions);
-        } else {
-          res.status(400);
-          throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
-        }
-        break;
-      }
-      default: {
-        res.status(400);
-        throw new Error("Chỉ sort theo tổng tiền và ngày tạo giao dịch");
-      }
+    if (sortType === SortTypeEnum.ASC) {
+      await Transaction.find({
+        transaction_status: { $in: transaction_status },
+      })
+        .sort({ createdAt: 1 })
+        .populate("timeshare_id")
+        .populate("customers")
+        .exec((err, reservePlaces) => {
+          if (err) {
+            res.status(500);
+            throw new Error(
+              "Có lỗi xảy ra khi truy xuất tất cả giao dịch theo ngày tạo"
+            );
+          }
+          res.status(200).json(reservePlaces);
+        });
+    } else if (sortType === SortTypeEnum.DESC) {
+      await Transaction.find({
+        transaction_status: { $in: transaction_status },
+      })
+        .sort({ createdAt: -1 })
+        .populate("timeshare_id")
+        .populate("customers")
+        .exec((err, reservePlaces) => {
+          if (err) {
+            res.status(500);
+            throw new Error(
+              "Có lỗi xảy ra khi truy xuất tất cả giao dịch theo ngày tạo"
+            );
+          }
+          res.status(200).json(reservePlaces);
+        });
+    } else {
+      res.status(400);
+      throw new Error("Chỉ có thể tìm kiếm tăng dần hoặc giảm dần");
     }
   } catch (error) {
     res
