@@ -10,7 +10,7 @@ const createPhase = asyncHandler(async (req, res) => {
       res.status(403);
       throw new Error("Chỉ có chủ đầu tư có quyền tạo giai đoạn thanh toán");
     }
-    const { contract_id } = req.body;
+    const { contract_id, remittance_deadline, phase_no } = req.body;
     const contract = await Contract.findById(contract_id).populate({
       path: "transaction_id",
       populate: {
@@ -36,6 +36,10 @@ const createPhase = asyncHandler(async (req, res) => {
         "Không thế tạo giai đoạn thanh toán. Hợp đồng đã được xác nhận bởi khách hàng"
       );
     }
+    if (phase_no < 1 || phase_no > 5) {
+      res.status(400);
+      throw new Error("Chỉ có thể tạo từ 1 đến 5 giai đoạn thanh toán");
+    }
     const phases_of_contract = await Phase.find({ contract_id });
     if (!phases_of_contract) {
       res.status(400);
@@ -43,69 +47,30 @@ const createPhase = asyncHandler(async (req, res) => {
         "Có lỗi xảy ra khi truy xuất tất cả giai đoạn thanh toán của hợp đồng"
       );
     }
-    if (phases_of_contract.length === 0) {
-      const { remittance_deadline } = req.body;
-      const currentDate = moment(new Date());
-      const remittance_deadline_date = moment(remittance_deadline);
-      if (currentDate.isAfter(remittance_deadline_date)) {
-        res.status(400);
-        throw new Error("Ngày hết hạn chuyển tiền phải sau ngày hiện tại");
-      }
-      const phase = new Phase(req.body);
-      phase.phase_price =
-        (req.body.phase_price_percent / 100) * contract.final_price;
-      phase.phase_no = 1;
-      phase.is_payment = false;
-      const result = await phase.save();
-      if (!result) {
-        res.status(500);
-        throw new Error("Có lỗi xảy ra khi tạo giai đoạn thanh toán");
-      }
-      res.status(201).json(result);
-    } else {
-      const total_phase = phases_of_contract.length;
-      if (total_phase === 5) {
-        res.status(400);
-        throw new Error("Chỉ có thể tạo tối đa 5 giai đoạn thanh toán");
-      }
-      const current_phase = await Phase.findOne({
-        contract_id,
-        phase_no: total_phase,
-      });
-      if (!current_phase) {
-        res.status(400);
-        throw new Error(
-          "Có lỗi xảy ra khi truy xuất thông tin giai đoạn trước đó"
-        );
-      }
-      const { remittance_deadline } = req.body;
-      const remittance_deadline_date = moment(new Date(remittance_deadline));
-      const current_phase_remittance_deadline_date = moment(
-        current_phase.remittance_deadline
-      );
-      if (
-        remittance_deadline_date.isBefore(
-          current_phase_remittance_deadline_date
-        )
-      ) {
-        res.status(400);
-        throw new Error(
-          "Ngày hết hạn chuyển tiền của giai đoạn sau phải sau Ngày hết hạn chuyển tiền của giai đoạn trước đó"
-        );
-      }
-      const phase = new Phase(req.body);
-      phase.phase_price =
-        (req.body.phase_price_percent / 100) * contract.final_price;
-      phase.phase_no = total_phase + 1;
-      phase.remittance_deadline = remittance_deadline_date;
-      phase.is_payment = false;
-      const result = await phase.save();
-      if (!result) {
-        res.status(500);
-        throw new Error("Có lỗi xảy ra khi tạo giai đoạn thanh toán");
-      }
-      res.status(201).json(result);
+    const total_phase = phases_of_contract.length;
+    if (total_phase === 5) {
+      res.status(400);
+      throw new Error("Chỉ có thể tạo tối đa 5 giai đoạn thanh toán");
     }
+    const isExistPhaseNo = phases_of_contract.find(
+      (p) => p.phase_no === phase_no
+    );
+    if (isExistPhaseNo) {
+      res.status(400);
+      throw new Error(`Giai đoạn số ${phase_no} đã tồn tại`);
+    }
+    const phase = new Phase(req.body);
+    const remittance_deadline_date = moment(new Date(remittance_deadline));
+    phase.phase_price =
+      (req.body.phase_price_percent / 100) * contract.final_price;
+    phase.remittance_deadline = remittance_deadline_date;
+    phase.is_payment = false;
+    const result = await phase.save();
+    if (!result) {
+      res.status(500);
+      throw new Error("Có lỗi xảy ra khi tạo giai đoạn thanh toán");
+    }
+    res.status(201).json(result);
   } catch (error) {
     res
       .status(res.statusCode || 500)
