@@ -7,7 +7,6 @@ const {
   updateTimeshare,
   changeTimeshareStatus,
   changeSellTimeshareStatus,
-  searchUserByName,
   searchTimeshareByName,
   deleteTimeshare,
   filterTimeshare,
@@ -21,12 +20,13 @@ const {
 const {
   validateToken,
   validateTokenAdmin,
-  validateTokenAdminAndInvestor,
   validateTokenInvestor,
 } = require("../app/middleware/validateTokenHandler");
 const timeshareRouter = express.Router();
 
 timeshareRouter.route("/guest").get(getTimesharesForGuest);
+
+timeshareRouter.route("/search").get(searchTimeshareByName);
 
 timeshareRouter.use(validateToken);
 
@@ -37,8 +37,6 @@ timeshareRouter.route("/timeshare_image").post(createTimeshareImage);
 timeshareRouter.route("/investor").get(getTimesharesForInvestor);
 
 timeshareRouter.route("/changeStatus").patch(changeTimeshareStatus);
-
-timeshareRouter.route("/search").get(searchTimeshareByName);
 
 timeshareRouter.route("/filter").post(filterTimeshare);
 
