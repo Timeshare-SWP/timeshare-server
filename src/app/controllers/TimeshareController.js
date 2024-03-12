@@ -424,19 +424,20 @@ const searchTimeshareByName = asyncHandler(async (req, res, next) => {
       res.status(400);
       throw new Error("Tên timeshare không được trống");
     }
-    Timeshare.find(
-      { timeshare_name: { $regex: searchName, $options: "i" } },
-      (err, timeshares) => {
-        if (err) {
-          // Handle error
-          res.status(500);
-          throw new Error(err.message);
-        } else {
-          // Send the results as a JSON response to the client
-          res.status(200).json(timeshares);
-        }
-      }
-    );
+    const timeshares = await Timeshare.find({
+      timeshare_name: { $regex: searchName, $options: "i" },
+    })
+      .populate("investor_id")
+      .populate("timeshare_image")
+      .exec();
+    if (!timeshares) {
+      // Handle error
+      res.status(500);
+      throw new Error(err.message);
+    } else {
+      // Send the results as a JSON response to the client
+      res.status(200).json(timeshares);
+    }
   } catch (error) {
     res
       .status(res.statusCode || 500)
