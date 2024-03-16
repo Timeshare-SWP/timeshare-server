@@ -3,6 +3,7 @@ const transactionRouter = express.Router();
 const {
   validateToken,
   validateTokenAdmin,
+  validateTokenInvestor,
 } = require("../app/middleware/validateTokenHandler");
 const {
   searchCustomerByName,
@@ -15,7 +16,16 @@ const {
   confirmSellTimeshare,
   statisticsTransactionByStatus,
   sortTransaction,
+  getWaitingTimeshareOfInvestor,
+  getSelectedAndRejectedTimeshareOfInvestor,
+  statisticsTransactionForCustomer,
+  statisticsSelectedTransactionForCustomer,
+  countQuantifyOfBuyer,
 } = require("../app/controllers/TransactionController");
+
+transactionRouter
+  .route("/countQuantifyOfBuyer/:timeshare_id")
+  .get(countQuantifyOfBuyer);
 
 transactionRouter.use(validateToken);
 
@@ -44,5 +54,21 @@ transactionRouter
 transactionRouter
   .route("/replyTransactionInvite")
   .post(replyJoinTimeshareRequest);
+
+transactionRouter
+  .route("/waitingTransaction")
+  .get(validateTokenInvestor, getWaitingTimeshareOfInvestor);
+
+transactionRouter
+  .route("/selected&RejectedTransaction")
+  .get(validateTokenInvestor, getSelectedAndRejectedTimeshareOfInvestor);
+
+transactionRouter
+  .route("/statisticTransactionForCustomer")
+  .get(statisticsTransactionForCustomer);
+
+transactionRouter
+  .route("/statisticSelectedTransactionForCustomer")
+  .get(statisticsSelectedTransactionForCustomer);
 
 module.exports = transactionRouter;

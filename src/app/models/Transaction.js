@@ -30,6 +30,9 @@ const transactionSchema = mongoose.Schema(
     reservation_pay_date: {
       type: Date,
     },
+    note_rejected: {
+      type: String,
+    },
   },
   { timestamps: true }
 );

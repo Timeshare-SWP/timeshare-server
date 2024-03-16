@@ -67,6 +67,7 @@ const feedbackRouter = require("./src/routes/FeedbackRouter");
 const supportRouter = require("./src/routes/SupportRouter");
 const vnPayRouter = require("./src/routes/VNPayRouter");
 const chatRouter = require("./src/routes/ChatRouter");
+const apartmentRouter = require("./src/routes/ApartmentRouter");
 
 //static folder path
 app.use(express.static(path.resolve(__dirname, "public")));
@@ -85,6 +86,7 @@ app.use("/api/supports", supportRouter);
 app.use("/api/supports", supportRouter);
 app.use("/api/vnpays", vnPayRouter);
 app.use("/api/chats", chatRouter);
+app.use("/api/apartments", apartmentRouter);
 
 // Global error handler
 app.use(errorHandler);

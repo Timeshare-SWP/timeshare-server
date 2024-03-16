@@ -84,6 +84,10 @@ const timeshareSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    is_confirm: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

@@ -16,12 +16,14 @@ const {
   statisticTimeshareByMonth,
   sortTimeshare,
   statisticsTimeshareBySellStatusForInvestor,
+  confirmTimeshare,
 } = require("../app/controllers/TimeshareController");
 const {
   validateToken,
   validateTokenAdmin,
   validateTokenInvestor,
 } = require("../app/middleware/validateTokenHandler");
+
 const timeshareRouter = express.Router();
 
 timeshareRouter.route("/guest").get(getTimesharesForGuest);
@@ -61,6 +63,10 @@ timeshareRouter
   .get(validateTokenAdmin, statisticTimeshareByMonth);
 
 timeshareRouter.route("/sortTimeshare").get(validateTokenAdmin, sortTimeshare);
+
+timeshareRouter
+  .route("/confirmTimeshare/:timeshare_id")
+  .patch(validateTokenAdmin, confirmTimeshare);
 
 timeshareRouter
   .route("/:timeshare_id")

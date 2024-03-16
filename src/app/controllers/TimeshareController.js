@@ -9,6 +9,7 @@ const moment = require("moment");
 const SortTypeEnum = require("../../enum/SortTypeEnum");
 const SortByEnum = require("../../enum/SortByEnum");
 const TransactionStatus = require("../../enum/TransactionStatus");
+const TimeshareType = require("../../enum/TimeshareType");
 
 // @desc create new Timeshare
 // @route POST /timeshares
@@ -58,12 +59,15 @@ const createTimeshare = asyncHandler(async (req, res) => {
       !timeshare_image ||
       !land_area ||
       !deposit_price ||
-      !sell_number ||
       !year_of_commencement ||
       !year_of_handover
     ) {
       res.status(400);
       throw new Error("Không được để trống các thuộc tính bắt buộc");
+    }
+    if (timeshare_type === TimeshareType.APARTMENT && !sell_number) {
+      res.status(400);
+      throw new Error("Căn hộ chung cư cần có số lượng bán");
     }
     if (max_price < price) {
       res.status(400);
@@ -811,6 +815,30 @@ const sortTimeshare = asyncHandler(async (req, res) => {
   }
 });
 
+const confirmTimeshare = asyncHandler(async (req, res) => {
+  try {
+    const { timeshare_id } = req.params;
+    const timeshare = await Timeshare.findById(timeshare_id).populate(
+      "investor_id"
+    );
+    if (!timeshare) {
+      res.status(404);
+      throw new Error("Không tìm thấy timeshare");
+    }
+    timeshare.is_confirm = true;
+    const result = await timeshare.save();
+    if (!result) {
+      res.status(500);
+      throw new Error("Có lỗi xảy ra khi xác thực timeshare");
+    }
+    res.status(200).json(timeshare);
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
 module.exports = {
   createTimeshare,
   getTimeshareById,
@@ -828,4 +856,5 @@ module.exports = {
   statisticsTimeshareBySellStatusForInvestor,
   statisticTimeshareByMonth,
   sortTimeshare,
+  confirmTimeshare,
 };
