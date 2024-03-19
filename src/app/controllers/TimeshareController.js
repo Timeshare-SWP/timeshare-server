@@ -65,9 +65,9 @@ const createTimeshare = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error("Không được để trống các thuộc tính bắt buộc");
     }
-    if (timeshare_type === TimeshareType.APARTMENT && !sell_number) {
+    if (timeshare_type === TimeshareType.CONDOMINIUM && !sell_number) {
       res.status(400);
-      throw new Error("Căn hộ chung cư cần có số lượng bán");
+      throw new Error("Chung cư cần có số lượng số lượng căn hộ cần bán");
     }
     if (max_price < price) {
       res.status(400);
