@@ -58,9 +58,7 @@ const createTimeshare = asyncHandler(async (req, res) => {
       !timeshare_type ||
       !timeshare_image ||
       !land_area ||
-      !deposit_price ||
-      !year_of_commencement ||
-      !year_of_handover
+      !deposit_price
     ) {
       res.status(400);
       throw new Error("Không được để trống các thuộc tính bắt buộc");
