@@ -13,6 +13,8 @@ const SortTypeEnum = require("../../enum/SortTypeEnum");
 const SortByEnum = require("../../enum/SortByEnum");
 const Contract = require("../models/Contract");
 const Phase = require("../models/Phase");
+const ConfirmStatus = require("../../enum/ConfirmStatus");
+const TimeshareType = require("../../enum/TimeshareType");
 
 //@desc search Customer By Name
 //@route GET /api/transactions/searchCustomerToInvite
@@ -213,9 +215,20 @@ const buyTimeshare = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error("Trạng thái timeshare không phù hợp để mua!");
     }
+    if (timeshare.confirm_status !== ConfirmStatus.ACCEPTED) {
+      res.status(400);
+      throw new Error(
+        "Timeshare chưa được admin phê duyệt không thể thực hiện chức năng này!"
+      );
+    }
     if (is_reserve) {
       const transaction = await Transaction.findById(transaction_id)
-        .populate("timeshare_id")
+        .populate("apartment_id")
+        .populate("customers")
+        .populate({
+          path: "timeshare_id",
+          populate: { path: "timeshare_image" },
+        })
         .exec();
       if (!transaction) {
         res.status(404);
@@ -243,7 +256,16 @@ const buyTimeshare = asyncHandler(async (req, res) => {
         res.status(500);
         throw new Error("Có lỗi xảy ra khi mua timeshare");
       }
-      res.status(200).json(result);
+      res.status(200).json(
+        await Transaction.findById(transaction.id)
+          .populate("apartment_id")
+          .populate("customers")
+          .populate({
+            path: "timeshare_id",
+            populate: { path: "timeshare_image" },
+          })
+          .exec()
+      );
     } else {
       const is_exist_transaction = await Transaction.find({
         timeshare_id,
@@ -257,10 +279,18 @@ const buyTimeshare = asyncHandler(async (req, res) => {
           }
         });
       }
+      if (
+        timeshare.timeshare_type === TimeshareType.CONDOMINIUM &&
+        !req.body.apartment_id
+      ) {
+        res.status(400);
+        throw new Error("Chung cư phải có thông tin căn hộ");
+      }
       const transaction = new Transaction({
         timeshare_id,
         transaction_status: TransactionStatus.WAITING,
       });
+      transaction.apartment_id = req.body.apartment_id;
       transaction.customers = new Array();
       transaction.customers.push(req.user.id);
       const result = await transaction.save();
@@ -268,7 +298,16 @@ const buyTimeshare = asyncHandler(async (req, res) => {
         res.status(500);
         throw new Error("Có lỗi xảy ra khi mua timeshare");
       }
-      res.status(200).json(result);
+      res.status(200).json(
+        await Transaction.findById(transaction.id)
+          .populate("apartment_id")
+          .populate("customers")
+          .populate({
+            path: "timeshare_id",
+            populate: { path: "timeshare_image" },
+          })
+          .exec()
+      );
     }
   } catch (error) {
     res
@@ -291,6 +330,7 @@ const getAllTransactions = asyncHandler(async (req, res) => {
       transaction_status: { $in: transaction_status },
     })
       .populate("customers")
+      .populate("apartment_id")
       .populate({
         path: "timeshare_id",
         populate: { path: "timeshare_image" },
@@ -367,6 +407,7 @@ const searchTransactionByTimeshareName = asyncHandler(
         transaction_status: { $in: transaction_status },
       })
         .populate("customers")
+        .populate("apartment_id")
         .populate({
           path: "timeshare_id",
           populate: { path: "timeshare_image" },
@@ -458,6 +499,7 @@ const filterTransactionByTimeshare = asyncHandler(async (req, res) => {
         transaction_status: { $in: transaction_status },
       })
         .populate("customers")
+        .populate("apartment_id")
         .populate({
           path: "timeshare_id",
           populate: { path: "timeshare_image" },
@@ -629,8 +671,8 @@ const statisticsTransactionByStatus = asyncHandler(async (req, res) => {
       Rejected: 0,
     };
 
-    transactions.forEach((timeshare) => {
-      const transaction_status = timeshare.transaction_status;
+    transactions.forEach((transaction) => {
+      const transaction_status = transaction.transaction_status;
       tmpCountData[transaction_status] = tmpCountData[transaction_status] + 1;
     });
 
@@ -660,6 +702,7 @@ const sortTransaction = asyncHandler(async (req, res) => {
       })
         .sort({ createdAt: 1 })
         .populate("timeshare_id")
+        .populate("apartment_id")
         .populate("customers")
         .exec((err, reservePlaces) => {
           if (err) {
@@ -676,6 +719,7 @@ const sortTransaction = asyncHandler(async (req, res) => {
       })
         .sort({ createdAt: -1 })
         .populate("timeshare_id")
+        .populate("apartment_id")
         .populate("customers")
         .exec((err, reservePlaces) => {
           if (err) {
@@ -754,6 +798,7 @@ const getWaitingTimeshareOfInvestor = asyncHandler(async (req, res) => {
       transaction_status: TransactionStatus.WAITING,
     })
       .populate("customers")
+      .populate("apartment_id")
       .populate({
         path: "timeshare_id",
         populate: { path: "timeshare_image" },
@@ -795,6 +840,7 @@ const getSelectedAndRejectedTimeshareOfInvestor = asyncHandler(
         transaction_status: { $in: transaction_status },
       })
         .populate("customers")
+        .populate("apartment_id")
         .populate({
           path: "timeshare_id",
           populate: { path: "timeshare_image" },
@@ -895,7 +941,18 @@ const statisticsSelectedTransactionForCustomer = asyncHandler(
       const transactions = await Transaction.find({
         customers: { $in: req.user.id },
         transaction_status: TransactionStatus.SELECTED,
-      }).populate("timeshare_id");
+      })
+        .populate("customers")
+        .populate("apartment_id")
+        .populate({
+          path: "timeshare_id",
+          populate: { path: "timeshare_image" },
+        })
+        .populate({
+          path: "timeshare_id",
+          populate: { path: "investor_id" },
+        })
+        .exec();
       if (!transactions || transactions.length === 0) {
         return null;
       }
@@ -935,6 +992,28 @@ const statisticsSelectedTransactionForCustomer = asyncHandler(
   }
 );
 
+const countTransactionSelectedForCustomer = asyncHandler(async (req, res) => {
+  try {
+    const { customer_id } = req.params;
+    const customer = await User.findById(customer_id);
+    if (!customer) {
+      res.status(400);
+      throw new Error("Không thể bỏ trống customer_id");
+    }
+    const transactions = await Transaction.find({
+      customers: { $in: customer_id },
+      transaction_status: TransactionStatus.SELECTED,
+    });
+    if (!transactions || transactions.length === 0) {
+      res.status(200).json(0);
+    } else res.status(200).json(transactions.length);
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .send(error.message || "Internal Server Error");
+  }
+});
+
 module.exports = {
   searchCustomerByName,
   inviteCustomerJoinTimeshare,
@@ -951,4 +1030,5 @@ module.exports = {
   getSelectedAndRejectedTimeshareOfInvestor,
   statisticsSelectedTransactionForCustomer,
   statisticsTransactionForCustomer,
+  countTransactionSelectedForCustomer,
 };

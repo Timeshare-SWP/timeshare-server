@@ -7,6 +7,11 @@ const transactionSchema = mongoose.Schema(
       ref: "Timeshare",
       required: true,
     },
+    apartment_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Apartment",
+      required: false,
+    },
     customers: [
       {
         type: mongoose.Schema.Types.ObjectId,

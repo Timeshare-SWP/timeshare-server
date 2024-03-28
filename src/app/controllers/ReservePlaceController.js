@@ -7,6 +7,7 @@ const TransactionStatus = require("../../enum/TransactionStatus");
 const { default: mongoose } = require("mongoose");
 const SortTypeEnum = require("../../enum/SortTypeEnum");
 const SortByEnum = require("../../enum/SortByEnum");
+const TimeshareType = require("../../enum/TimeshareType");
 
 //@desc Create new ReservePlace
 //@route POST /reservePlaces
@@ -30,6 +31,13 @@ const createReservePlace = asyncHandler(async (req, res) => {
     if (timeshare.sell_timeshare_status !== SellTimeshareStatus.NOT_YET_SOLD) {
       res.status(400);
       throw new Error("Chỉ timeshare chưa được bán mới có thể đặt cọc");
+    }
+    if (
+      timeshare.timeshare_type === TimeshareType.CONDOMINIUM &&
+      !req.body.apartment_id
+    ) {
+      res.status(400);
+      throw new Error("Chung cư phải có thông tin căn hộ");
     }
     const reservePlace = new Transaction(req.body);
     if (!reservePlace) {
@@ -83,7 +91,14 @@ const searchReservePlaceByTimeshareName = asyncHandler(
       const reservePlaces = await Transaction.find({
         timeshare_id: { $in: timeshareIds },
         transaction_status: { $in: transaction_status_reserve },
-      });
+      })
+        .populate("apartment_id")
+        .populate("customers")
+        .populate({
+          path: "timeshare_id",
+          populate: { path: "timeshare_image" },
+        })
+        .exec();
       if (!reservePlaces) {
         res.status(500);
         throw new Error("Có lỗi khi tìm kiếm đặt cọc theo tên timeshare");
@@ -167,7 +182,14 @@ const filterReservePlaceByTimeshare = asyncHandler(async (req, res) => {
       const reservePlaces = await Transaction.find({
         timeshare_id: { $in: timeshareIds },
         transaction_status: { $in: transaction_status_reserve },
-      });
+      })
+        .populate("apartment_id")
+        .populate("customers")
+        .populate({
+          path: "timeshare_id",
+          populate: { path: "timeshare_image" },
+        })
+        .exec();
       if (!reservePlaces) {
         res.status(500);
         throw new Error("Có lỗi khi tìm kiếm đặt cọc theo tên timeshare");
@@ -221,6 +243,7 @@ const getAllReservePlaces = asyncHandler(async (req, res) => {
     const reservePlaces = await Transaction.find({
       transaction_status: { $in: transaction_status_reserve },
     })
+      .populate("apartment_id")
       .populate("customers")
       .populate({
         path: "timeshare_id",
@@ -348,6 +371,7 @@ const sortReservePlace = asyncHandler(async (req, res) => {
           })
             .sort({ createdAt: 1 })
             .populate("timeshare_id")
+            .populate("apartment_id")
             .populate("customers")
             .exec((err, reservePlaces) => {
               if (err) {
@@ -364,6 +388,7 @@ const sortReservePlace = asyncHandler(async (req, res) => {
           })
             .sort({ createdAt: -1 })
             .populate("timeshare_id")
+            .populate("apartment_id")
             .populate("customers")
             .exec((err, reservePlaces) => {
               if (err) {
@@ -387,6 +412,7 @@ const sortReservePlace = asyncHandler(async (req, res) => {
           })
             .sort({ reservation_price: 1 })
             .populate("timeshare_id")
+            .populate("apartment_id")
             .populate("customers")
             .exec((err, reservePlaces) => {
               if (err) {
@@ -403,6 +429,7 @@ const sortReservePlace = asyncHandler(async (req, res) => {
           })
             .sort({ reservation_price: -1 })
             .populate("timeshare_id")
+            .populate("apartment_id")
             .populate("customers")
             .exec((err, reservePlaces) => {
               if (err) {
@@ -426,6 +453,7 @@ const sortReservePlace = asyncHandler(async (req, res) => {
           })
             .sort({ reservation_time: 1 })
             .populate("timeshare_id")
+            .populate("apartment_id")
             .populate("customers")
             .exec((err, reservePlaces) => {
               if (err) {
@@ -442,6 +470,7 @@ const sortReservePlace = asyncHandler(async (req, res) => {
           })
             .sort({ reservation_time: -1 })
             .populate("timeshare_id")
+            .populate("apartment_id")
             .populate("customers")
             .exec((err, reservePlaces) => {
               if (err) {

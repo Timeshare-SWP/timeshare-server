@@ -2,6 +2,7 @@ const asyncHandler = require("express-async-handler");
 const Timeshare = require("../models/Timeshare");
 const Apartment = require("../models/Apartment");
 const TimeshareType = require("../../enum/TimeshareType");
+const ConfirmStatus = require("../../enum/ConfirmStatus");
 
 const createApartment = asyncHandler(async (req, res) => {
   try {
@@ -43,9 +44,9 @@ const createApartment = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error("Chỉ có timeshare là căn hộ được quyền tạo");
     }
-    if (!timeshare.is_confirm) {
+    if (timeshare.confirm_status !== ConfirmStatus.ACCEPTED) {
       res.status(400);
-      throw new Error("Timeshare chưa được admin xét duyệt");
+      throw new Error("Timeshare chưa được admin xét duyệt đồng ý");
     }
     const apartment = await Apartment.create(req.body);
     if (!apartment) {

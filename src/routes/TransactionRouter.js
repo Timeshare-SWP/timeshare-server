@@ -21,11 +21,16 @@ const {
   statisticsTransactionForCustomer,
   statisticsSelectedTransactionForCustomer,
   countQuantifyOfBuyer,
+  countTransactionSelectedForCustomer,
 } = require("../app/controllers/TransactionController");
 
 transactionRouter
   .route("/countQuantifyOfBuyer/:timeshare_id")
   .get(countQuantifyOfBuyer);
+
+transactionRouter
+  .route("/countTransactionSelectedForCustomer/:customer_id")
+  .get(countTransactionSelectedForCustomer);
 
 transactionRouter.use(validateToken);
 

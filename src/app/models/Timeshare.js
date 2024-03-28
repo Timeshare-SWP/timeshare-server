@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const ConfirmStatus = require("../../enum/ConfirmStatus");
 
 const timeshareSchema = mongoose.Schema(
   {
@@ -84,9 +85,12 @@ const timeshareSchema = mongoose.Schema(
       type: String,
       required: true,
     },
-    is_confirm: {
-      type: Boolean,
-      default: false,
+    confirm_status: {
+      type: String,
+      default: ConfirmStatus.PENDING,
+    },
+    reason_rejected: {
+      type: String,
     },
   },
   { timestamps: true }

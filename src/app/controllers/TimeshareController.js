@@ -10,6 +10,7 @@ const SortTypeEnum = require("../../enum/SortTypeEnum");
 const SortByEnum = require("../../enum/SortByEnum");
 const TransactionStatus = require("../../enum/TransactionStatus");
 const TimeshareType = require("../../enum/TimeshareType");
+const ConfirmStatus = require("../../enum/ConfirmStatus");
 
 // @desc create new Timeshare
 // @route POST /timeshares
@@ -125,7 +126,9 @@ const getTimeshareById = asyncHandler(async (req, res) => {
 // @access Public
 const getTimesharesForGuest = asyncHandler(async (req, res) => {
   try {
-    const timeshares = await Timeshare.find()
+    const timeshares = await Timeshare.find({
+      confirm_status: ConfirmStatus.ACCEPTED,
+    })
       .populate("investor_id")
       .populate("timeshare_image")
       .exec();
@@ -239,6 +242,7 @@ const updateTimeshare = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error("Năm bàn giao phải lớn hơn hoặc bằng năm khởi công");
     }
+    req.body.confirm_status = ConfirmStatus.PENDING;
     const updateTimeshare = await Timeshare.findByIdAndUpdate(
       timeshare_id,
       req.body,
@@ -275,6 +279,12 @@ const changeTimeshareStatus = asyncHandler(async (req, res) => {
       res.status(403);
       throw new Error(
         "Chủ đầu tư không thể chỉnh sửa trạng thái timeshare của người khác"
+      );
+    }
+    if (timeshare.confirm_status !== ConfirmStatus.ACCEPTED) {
+      res.status(400);
+      throw new Error(
+        "Timeshare chưa được admin phê duyệt không thể thực hiện chức năng này!"
       );
     }
     switch (timeshare_status) {
@@ -361,6 +371,12 @@ const changeSellTimeshareStatus = asyncHandler(async (req, res) => {
         "Chủ đầu tư không thể chỉnh sửa trạng thái timeshare của người khác"
       );
     }
+    if (timeshare.confirm_status !== ConfirmStatus.ACCEPTED) {
+      res.status(400);
+      throw new Error(
+        "Timeshare chưa được admin phê duyệt không thể thực hiện chức năng này!"
+      );
+    }
     switch (sell_timeshare_status) {
       case SellTimeshareStatus.NOT_YET_SOLD: {
         res.status(400);
@@ -428,6 +444,8 @@ const searchTimeshareByName = asyncHandler(async (req, res, next) => {
     }
     const timeshares = await Timeshare.find({
       timeshare_name: { $regex: searchName, $options: "i" },
+      confirm_status: ConfirmStatus.ACCEPTED,
+      sell_timeshare_status: { $ne: SellTimeshareStatus.SOLD },
     })
       .populate("investor_id")
       .populate("timeshare_image")
@@ -815,7 +833,7 @@ const sortTimeshare = asyncHandler(async (req, res) => {
 
 const confirmTimeshare = asyncHandler(async (req, res) => {
   try {
-    const { timeshare_id } = req.params;
+    const { timeshare_id, confirm_status, reason_rejected } = req.params;
     const timeshare = await Timeshare.findById(timeshare_id).populate(
       "investor_id"
     );
@@ -823,12 +841,36 @@ const confirmTimeshare = asyncHandler(async (req, res) => {
       res.status(404);
       throw new Error("Không tìm thấy timeshare");
     }
-    timeshare.is_confirm = true;
-    const result = await timeshare.save();
-    if (!result) {
-      res.status(500);
-      throw new Error("Có lỗi xảy ra khi xác thực timeshare");
+    switch (confirm_status) {
+      case ConfirmStatus.ACCEPTED: {
+        timeshare.confirm_status = confirm_status;
+        const result = await timeshare.save();
+        if (!result) {
+          res.status(500);
+          throw new Error("Có lỗi xảy ra khi xác thực timeshare");
+        }
+        break;
+      }
+      case ConfirmStatus.REJECTED: {
+        if (!reason_rejected) {
+          res.status(400);
+          throw new Error("Phải nhập lý do khi từ chối");
+        }
+        timeshare.reason_rejected = reason_rejected;
+        timeshare.confirm_status = confirm_status;
+        const result = await timeshare.save();
+        if (!result) {
+          res.status(500);
+          throw new Error("Có lỗi xảy ra khi xác thực timeshare");
+        }
+        break;
+      }
+      default: {
+        res.status(400);
+        throw new Error("Trạng thái xác nhận không phù hợp");
+      }
     }
+
     res.status(200).json(timeshare);
   } catch (error) {
     res
