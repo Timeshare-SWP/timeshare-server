@@ -40,9 +40,9 @@ const createApartment = asyncHandler(async (req, res) => {
       res.status(403);
       throw new Error("Chỉ có chủ đầu tư sở hữu timeshare có quyền tạo căn hộ");
     }
-    if (timeshare.timeshare_type !== TimeshareType.APARTMENT) {
+    if (timeshare.timeshare_type !== TimeshareType.CONDOMINIUM) {
       res.status(400);
-      throw new Error("Chỉ có timeshare là căn hộ được quyền tạo");
+      throw new Error("Chỉ có timeshare là chung cư được quyền tạo");
     }
     if (timeshare.confirm_status !== ConfirmStatus.ACCEPTED) {
       res.status(400);
