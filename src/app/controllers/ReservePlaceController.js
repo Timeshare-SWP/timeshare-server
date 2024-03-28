@@ -8,6 +8,7 @@ const { default: mongoose } = require("mongoose");
 const SortTypeEnum = require("../../enum/SortTypeEnum");
 const SortByEnum = require("../../enum/SortByEnum");
 const TimeshareType = require("../../enum/TimeshareType");
+const Apartment = require("../models/Apartment");
 
 //@desc Create new ReservePlace
 //@route POST /reservePlaces
@@ -18,7 +19,7 @@ const createReservePlace = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error("Chỉ có khách hàng có thể đặt giữ chổ");
     }
-    const { timeshare_id, reservation_price } = req.body;
+    const { timeshare_id, apartment_id, reservation_price } = req.body;
     if (!timeshare_id || !reservation_price) {
       res.status(400);
       throw new Error("Không được để trống các thuộc tính bắt buộc");
@@ -34,10 +35,15 @@ const createReservePlace = asyncHandler(async (req, res) => {
     }
     if (
       timeshare.timeshare_type === TimeshareType.CONDOMINIUM &&
-      !req.body.apartment_id
+      !apartment_id
     ) {
       res.status(400);
       throw new Error("Chung cư phải có thông tin căn hộ");
+    }
+    const apartment = await Apartment.findById(apartment_id);
+    if (!apartment) {
+      res.status(400);
+      throw new Error("Căn hộ không tồn tại");
     }
     const reservePlace = new Transaction(req.body);
     if (!reservePlace) {
@@ -54,6 +60,8 @@ const createReservePlace = asyncHandler(async (req, res) => {
       res.status(500);
       throw new Error("Có lỗi xảy ra khi thực hiện đặt cọc");
     }
+    apartment.is_selected = true;
+    await apartment.save();
     res.status(201).json(newReservePlace);
   } catch (error) {
     res

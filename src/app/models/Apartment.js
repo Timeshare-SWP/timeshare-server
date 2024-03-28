@@ -39,6 +39,10 @@ const apartmentSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    is_selected: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
