@@ -814,7 +814,7 @@ const sortTimeshare = asyncHandler(async (req, res) => {
 
 const confirmTimeshare = asyncHandler(async (req, res) => {
   try {
-    const { timeshare_id, confirm_status, reason_rejected } = req.params;
+    const { timeshare_id, confirm_status, reason_rejected } = req.body;
     const timeshare = await Timeshare.findById(timeshare_id).populate(
       "investor_id"
     );

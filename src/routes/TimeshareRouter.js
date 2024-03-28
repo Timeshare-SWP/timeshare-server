@@ -65,7 +65,7 @@ timeshareRouter
 timeshareRouter.route("/sortTimeshare").get(validateTokenAdmin, sortTimeshare);
 
 timeshareRouter
-  .route("/confirmTimeshare/:timeshare_id")
+  .route("/confirmTimeshare")
   .patch(validateTokenAdmin, confirmTimeshare);
 
 timeshareRouter

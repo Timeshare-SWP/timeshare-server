@@ -8,7 +8,7 @@ const apartmentSchema = mongoose.Schema(
       required: true,
     },
     apartment_image: {
-      type: String,
+      type: [String],
       required: true,
     },
     area: {
