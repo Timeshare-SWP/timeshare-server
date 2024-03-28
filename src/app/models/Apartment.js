@@ -16,11 +16,11 @@ const apartmentSchema = mongoose.Schema(
       required: true,
     },
     apartment_number: {
-      type: Number,
+      type: String,
       required: true,
     },
     floor_number: {
-      type: Number,
+      type: String,
       required: true,
     },
     note: {

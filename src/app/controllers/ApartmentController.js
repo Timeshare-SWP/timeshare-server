@@ -44,10 +44,6 @@ const createApartment = asyncHandler(async (req, res) => {
       res.status(400);
       throw new Error("Chỉ có timeshare là chung cư được quyền tạo");
     }
-    if (timeshare.confirm_status !== ConfirmStatus.ACCEPTED) {
-      res.status(400);
-      throw new Error("Timeshare chưa được admin xét duyệt đồng ý");
-    }
     const apartment = await Apartment.create(req.body);
     if (!apartment) {
       res.status(500);

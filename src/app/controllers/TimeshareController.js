@@ -126,9 +126,7 @@ const getTimeshareById = asyncHandler(async (req, res) => {
 // @access Public
 const getTimesharesForGuest = asyncHandler(async (req, res) => {
   try {
-    const timeshares = await Timeshare.find({
-      confirm_status: ConfirmStatus.ACCEPTED,
-    })
+    const timeshares = await Timeshare.find()
       .populate("investor_id")
       .populate("timeshare_image")
       .exec();
@@ -198,23 +196,6 @@ const updateTimeshare = asyncHandler(async (req, res) => {
       year_of_commencement,
       year_of_handover,
     } = req.body;
-    if (
-      !timeshare_name ||
-      !timeshare_address ||
-      !timeshare_description ||
-      !price ||
-      !max_price ||
-      !timeshare_type ||
-      !timeshare_image ||
-      !land_area ||
-      !deposit_price ||
-      !sell_number ||
-      !year_of_commencement ||
-      !year_of_handover
-    ) {
-      res.status(400);
-      throw new Error("Không được để trống các thuộc tính bắt buộc");
-    }
     const timeshare_id = req.params.timeshare_id;
     const timeshare = await Timeshare.findById(timeshare_id);
     if (!timeshare) {
