@@ -273,23 +273,47 @@ const buyTimeshare = asyncHandler(async (req, res) => {
           }
         });
       }
-      if (
-        timeshare.timeshare_type === TimeshareType.CONDOMINIUM &&
-        !apartment_id
-      ) {
-        res.status(400);
-        throw new Error("Chung cư phải có thông tin căn hộ");
+      if (timeshare.timeshare_type === TimeshareType.CONDOMINIUM) {
+        if (!apartment_id || apartment_id === "") {
+          res.status(400);
+          throw new Error("Chung cư phải có thông tin căn hộ");
+        }
+        const apartment = await Apartment.findById(apartment_id);
+        if (!apartment) {
+          res.status(400);
+          throw new Error("Căn hộ không tồn tại");
+        }
+        const transaction = new Transaction({
+          timeshare_id,
+          transaction_status: TransactionStatus.WAITING,
+        });
+        transaction.apartment_id = req.body.apartment_id;
+        transaction.customers = new Array();
+        transaction.customers.push(req.user.id);
+        const result = await transaction.save();
+        if (!result) {
+          res.status(500);
+          throw new Error("Có lỗi xảy ra khi mua timeshare");
+        }
+
+        apartment.is_selected = true;
+        await apartment.save();
+        res.status(200).json(
+          await Transaction.findById(transaction.id)
+            .populate("apartment_id")
+            .populate("customers")
+            .populate({
+              path: "timeshare_id",
+              populate: { path: "timeshare_image" },
+            })
+            .exec()
+        );
       }
-      const apartment = await Apartment.findById(apartment_id);
-      if (!apartment) {
-        res.status(400);
-        throw new Error("Căn hộ không tồn tại");
-      }
+
       const transaction = new Transaction({
         timeshare_id,
         transaction_status: TransactionStatus.WAITING,
       });
-      transaction.apartment_id = req.body.apartment_id;
       transaction.customers = new Array();
       transaction.customers.push(req.user.id);
       const result = await transaction.save();
@@ -298,8 +322,6 @@ const buyTimeshare = asyncHandler(async (req, res) => {
         throw new Error("Có lỗi xảy ra khi mua timeshare");
       }
 
-      apartment.is_selected = true;
-      await apartment.save();
       res.status(200).json(
         await Transaction.findById(transaction.id)
           .populate("apartment_id")
