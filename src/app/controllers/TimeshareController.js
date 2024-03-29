@@ -182,20 +182,8 @@ const updateTimeshare = asyncHandler(async (req, res) => {
         "Chỉ có chủ đầu tư có quyền thay đổi thông tin timeshare"
       );
     }
-    const {
-      timeshare_name,
-      timeshare_address,
-      timeshare_description,
-      price,
-      max_price,
-      timeshare_type,
-      timeshare_image,
-      land_area,
-      deposit_price,
-      sell_number,
-      year_of_commencement,
-      year_of_handover,
-    } = req.body;
+    const { price, max_price, year_of_commencement, year_of_handover } =
+      req.body;
     const timeshare_id = req.params.timeshare_id;
     const timeshare = await Timeshare.findById(timeshare_id);
     if (!timeshare) {
@@ -230,7 +218,13 @@ const updateTimeshare = asyncHandler(async (req, res) => {
       {
         new: true,
       }
-    );
+    )
+      .populate("investor_id")
+      .populate("timeshare_image");
+    if (!updateTimeshare) {
+      res.status(500);
+      throw new Error("Có lỗi xảy ra khi cập nhật thông tin timeshare");
+    }
     res.status(200).json(updateTimeshare);
   } catch (error) {
     res

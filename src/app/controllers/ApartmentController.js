@@ -118,17 +118,7 @@ const getAllApartmentOfTimeshare = asyncHandler(async (req, res) => {
 
 const updateApartment = asyncHandler(async (req, res) => {
   try {
-    const {
-      apartment_id,
-      apartment_image,
-      area,
-      apartment_number,
-      floor_number,
-      note,
-      number_of_rooms,
-      condition,
-      interior,
-    } = req.body;
+    const { apartment_id } = req.body;
     const apartment = await Apartment.findById(apartment_id).populate(
       "timeshare_id"
     );
@@ -144,20 +134,26 @@ const updateApartment = asyncHandler(async (req, res) => {
         "Chỉ có chủ đầu tư sở hữu timeshare có quyền chỉnh sửa thông tin căn hộ"
       );
     }
-    apartment.apartment_image = apartment_image ?? apartment.apartment_image;
-    apartment.area = area ?? apartment.area;
-    apartment.apartment_number = apartment_number ?? apartment.apartment_number;
-    apartment.floor_number = floor_number ?? apartment.floor_number;
-    apartment.note = note ?? apartment.note;
-    apartment.number_of_rooms = number_of_rooms ?? apartment.number_of_rooms;
-    apartment.condition = condition ?? apartment.condition;
-    apartment.interior = interior ?? apartment.interior;
-    const result = await apartment.save();
-    if (!result) {
+    const updateApartment = await Apartment.findByIdAndUpdate(
+      apartment_id,
+      req.body,
+      {
+        new: true,
+      }
+    )
+      .populate({
+        path: "timeshare_id",
+        populate: { path: "investor_id" },
+      })
+      .populate({
+        path: "timeshare_id",
+        populate: { path: "timeshare_image" },
+      });
+    if (!updateApartment) {
       res.status(500);
       throw new Error("Có lỗi xảy ra khi cập nhật thông tin căn hộ");
     }
-    res.status(200).json(result);
+    res.status(200).json(updateApartment);
   } catch (error) {
     res
       .status(res.statusCode || 500)

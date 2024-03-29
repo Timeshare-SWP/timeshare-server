@@ -15,6 +15,7 @@ const Contract = require("../models/Contract");
 const Phase = require("../models/Phase");
 const ConfirmStatus = require("../../enum/ConfirmStatus");
 const TimeshareType = require("../../enum/TimeshareType");
+const Apartment = require("../models/Apartment");
 
 //@desc search Customer By Name
 //@route GET /api/transactions/searchCustomerToInvite
@@ -222,14 +223,7 @@ const buyTimeshare = asyncHandler(async (req, res) => {
       );
     }
     if (is_reserve) {
-      const transaction = await Transaction.findById(transaction_id)
-        .populate("apartment_id")
-        .populate("customers")
-        .populate({
-          path: "timeshare_id",
-          populate: { path: "timeshare_image" },
-        })
-        .exec();
+      const transaction = await Transaction.findById(transaction_id);
       if (!transaction) {
         res.status(404);
         throw new Error("Không tìm thấy giao dịch giữ chổ");

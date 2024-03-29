@@ -174,7 +174,7 @@ const VNPayReturn = asyncHandler(async (req, res) => {
         // Create Notification
         const notification = new Notification({
           user_id: transaction.timeshare_id.investor_id,
-          notification_content: "Khách hàng đã chuyển tiền giữ chỗ",
+          notification_content: `Khách hàng đã chuyển tiền giữ chỗ cho dự án ${transaction.timeshare_id.timeshare_name}`,
           notification_title:
             NotificationType.NOTI_PAYMENT_BY_RESERVING_TO_INVESTOR,
           notification_type:
